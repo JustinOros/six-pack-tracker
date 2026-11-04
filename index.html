@@ -330,7 +330,7 @@ const SUPPS=[
 ];
 const SUPP_WARN='Supplements are optional. Check with your doctor first, especially if you take medication or have a health condition.';
 
-function defaults(){return{settings:{start:TODAY,weight:'',split:4,meals:3,units:'g',setup:false,trainDays:[],gym:'full',equip:[]},days:{},lifts:{}}}
+function defaults(){return{settings:{start:TODAY,weight:'',split:4,meals:3,units:'g',setup:false,trainDays:[],gym:'full',equip:[],level:'new'},days:{},lifts:{}}}
 function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r&&r.settings)return{settings:Object.assign(defaults().settings,r.settings),days:r.days||{},lifts:r.lifts||{}}}catch(e){}return defaults()}
 let S=load();
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
@@ -816,6 +816,59 @@ a.click();
 };
 }
 
+const GEAR=[
+['Plate-loaded chest press (total plates, both sides)',['pcp'],0.55,5],
+['Dumbbell bench press (each dumbbell)',['db','bench'],0.2,5],
+['One arm dumbbell row (one dumbbell)',['db'],0.22,5],
+['Dumbbell shoulder press (each dumbbell)',['db'],0.13,5],
+['Goblet squat (one dumbbell)',['db'],0.25,5],
+['Dumbbell Romanian deadlift (each dumbbell)',['db'],0.22,5],
+['Bulgarian split squat (each dumbbell)',['db','bench'],0.14,5],
+['Seated dumbbell curl (each dumbbell)',['db'],0.11,5],
+['Dumbbell lateral raise (each dumbbell)',['db'],0.045,5],
+['Curl bar curl (total, bar plus plates)',['ez'],0.28,5],
+['Curl bar skull crusher (total, bar plus plates)',['ez','bench'],0.22,5],
+['Barbell back squat (total, bar plus plates)',['bb','rack'],0.9,5],
+['Barbell deadlift (total, bar plus plates)',['bb'],1.1,5],
+['Barbell row (total, bar plus plates)',['bb'],0.6,5]
+];
+const LVL={new:['New to lifting',1],some:['Trained 1-3 years',1.35],exp:['Trained 3+ years',1.7]};
+function gearBw(){
+const s=parseFloat(S.settings.weight);if(s>0)return s;
+const w=weights();return w.length?w[w.length-1].w:0;
+}
+function r5(x){return Math.max(5,Math.round(x/5)*5)}
+function plateSet(total){
+const side=Math.max(0,Math.round(total/2/2.5)*2.5);
+let left=side;const out=[];
+[45,25,10,5,2.5].forEach(p=>{const n=Math.floor(left/p+1e-9);if(n>0){out.push(n*2+' x '+p+' lb');left-=n*p}});
+return out.join(', ');
+}
+function gearGuide(){
+if(!homeMode())return '';
+const bw=gearBw();
+const lv=LVL[S.settings.level]||LVL.new;
+const head=`<div class="card"><h2>Weights to Buy (Home Gym)</h2>
+<div class="row"><div class="grow"><label>Your experience</label><select id="glv">${Object.keys(LVL).map(k=>`<option value="${k}" ${(S.settings.level||'new')===k?'selected':''}>${LVL[k][0]}</option>`).join('')}</select></div></div>`;
+if(!bw)return head+`<p class="mute">Enter your starting weight in Setup to see suggested weights.</p></div>`;
+const rows=GEAR.filter(g=>g[1].every(owns));
+if(!rows.length)return head+`<p class="mute">Check your equipment in Setup to see suggested weights.</p></div>`;
+const f=[1,1.15,1.3];
+const calc=rows.map(g=>{const b=bw*g[2]*lv[1];return[g[0],f.map(x=>r5(b*x))]});
+const dbRows=rows.map((g,i)=>({g,v:calc[i][1][2]})).filter(x=>/dumbbell/i.test(x.g[0])&&!/total/i.test(x.g[0]));
+const maxDb=dbRows.length?Math.max.apply(null,dbRows.map(x=>x.v)):0;
+const pcpRow=calc.find(c=>/chest press/i.test(c[0]));
+let buy='';
+if(maxDb)buy+=`<li><b>Dumbbells:</b> up to ${maxDb} lb each by Week 16. An adjustable set that goes to ${maxDb+10} lb or more covers the whole plan, or buy fixed pairs in 5 lb steps and add heavier pairs as you progress.</li>`;
+if(pcpRow)buy+=`<li><b>Chest press plates:</b> about ${pcpRow[1][2]} lb total by Week 16, for example ${plateSet(pcpRow[1][2])}. Machine leverage varies, so treat this as a starting estimate and add plates as you go.</li>`;
+const ezRow=calc.find(c=>/Curl bar curl/.test(c[0]));
+if(ezRow)buy+=`<li><b>Curl bar:</b> about ${ezRow[1][2]} lb total by Week 16 (bar weight included). Small plates (2.5 lb and 5 lb) make progress easier.</li>`;
+return head+`<p class="mute">Estimates for working sets in the 6-12 rep range, based on your body weight of ${Math.round(bw)} lb and your experience. Start lighter than the Week 1 number and add weight when you hit the top of the rep range with clean form.</p>
+<div class="scroll"><table><tr><th>Lift</th><th>Week 1</th><th>Week 8</th><th>Week 16</th></tr>
+${calc.map(c=>`<tr><td>${c[0]}</td><td>${c[1][0]} lb</td><td>${c[1][1]} lb</td><td>${c[1][2]} lb</td></tr>`).join('')}</table></div>
+<div class="tip"><b>What to buy:</b><ul style="margin:6px 0 0 18px;padding:0">${buy}</ul></div>
+<p class="mute" style="margin:8px 0 0">These are rough averages for a man of your size. Everyone differs, so test your first week and adjust. Pull-ups, dips, push-ups and knee raises use your body weight, so they need no extra plates.</p></div>`;
+}
 function lastLift(name){const a=S.lifts[name];return a&&a.length?a[a.length-1]:null}
 function viewTrain(){
 const sp=SPLITS[S.settings.split];
@@ -863,9 +916,11 @@ return`<tr><td><b>${n}</b> <a class="vid" href="https://www.youtube.com/results?
 <tr><td>More focus and effort</td><td>Push to a point closer to failure</td></tr></table></div>
 <div class="tip"><b>When to progress:</b> Only add weight if you can match or beat your rep range with clean form. Top set: once you hit 8 solid reps, go heavier next week. Back-off set: once you hit 12 reps, slightly increase weight next time.</div>
 <div class="tip"><b>When to reset:</b> If you plateau for 2+ weeks on a lift, drop weight by about 10%, focus on perfect form, and rebuild.</div>
-</div>`;
+</div>
+${gearGuide()}`;
 }
 function bindTrain(){
+if($('#glv'))$('#glv').onchange=e=>{S.settings.level=e.target.value;save();render()};
 document.querySelectorAll('#spl button').forEach(b=>b.onclick=()=>{S.settings.split=+b.dataset.s;S.settings.trainDays=[];trainDay=0;save();render()});
 document.querySelectorAll('#tdy button').forEach(b=>b.onclick=()=>{trainDay=+b.dataset.d;render()});
 document.querySelectorAll('[data-lift]').forEach(i=>i.onchange=()=>{
