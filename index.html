@@ -69,8 +69,11 @@ canvas{width:100%;height:240px;display:block}
 .seg button.on{background:var(--accent);color:#111;border-color:var(--accent)}
 .vid{display:inline-block;background:#e5534b;color:#fff;text-decoration:none;font-size:10px;line-height:1;padding:4px 7px;border-radius:5px;vertical-align:middle;margin-left:4px}
 .vid:hover{background:#ff6b62}
-.shop{text-decoration:none;font-size:15px;margin-left:4px;vertical-align:middle}
-.shop:hover{filter:brightness(1.4)}
+.shops{display:inline-flex;gap:6px;margin-left:6px;vertical-align:middle;flex-wrap:wrap}
+.shop{text-decoration:none;font-size:12px;font-weight:700;padding:3px 8px;border-radius:12px;border:1px solid var(--line);white-space:nowrap}
+.shop.g{color:#7aa7ff;border-color:#7aa7ff55}
+.shop.a{color:#ffb347;border-color:#ffb34755}
+.shop:hover{filter:brightness(1.3)}
 .sl label{color:var(--text);font-size:15px;margin:0;flex:1;cursor:pointer}
 .sl input:checked+label{text-decoration:line-through;color:var(--mute)}
 .sl input:checked+label b{color:var(--mute)}
@@ -119,7 +122,7 @@ const addDays=(s,n)=>{const d=pd(s);d.setDate(d.getDate()+n);return ds(d)};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const TODAY=ds(new Date());
 const SHOPQ={'Caffeine':'Caffeine powder'};
-const shop=n=>`<a class="shop" href="https://www.google.com/search?tbm=shop&q=${encodeURIComponent(SHOPQ[n]||n+' supplement')}" target="_blank" rel="noopener noreferrer" title="Shop for ${esc(n)}" aria-label="Shop for ${esc(n)}">&#128722;</a>`;
+const shop=n=>{const q=encodeURIComponent(SHOPQ[n]||n+' supplement');return`<span class="shops"><a class="shop g" href="https://www.google.com/search?tbm=shop&q=${q}" target="_blank" rel="noopener noreferrer" title="Search Google Shopping for ${esc(n)}" aria-label="Search Google Shopping for ${esc(n)}">Google</a><a class="shop a" href="https://www.amazon.com/s?k=${q}" target="_blank" rel="noopener noreferrer" title="Search Amazon for ${esc(n)}" aria-label="Search Amazon for ${esc(n)}">Amazon</a></span>`};
 
 const PHASES=[
 {label:"Weeks 1-4",kcal:2200,p:180,c:190,f:70,plans:{
