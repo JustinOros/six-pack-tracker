@@ -429,9 +429,7 @@ ${SUPPS.map(s=>`<tr><td><b>${s[0]}</b></td><td>${s[1]}</td><td class="mute">${s[
 </div>`;
 }
 
-function viewSetup(){
-const s=S.settings;
-const wt=parseFloat(s.weight);
+function calcHtml(wt){
 let calc='';
 if(wt>0){
 const m1=Math.round(wt*14),m2=Math.round(wt*16);
@@ -444,6 +442,10 @@ calc=`<h3>Your estimates</h3>
 </div>
 <p class="mute">The Meals tab uses the fixed blueprint targets (2200, 2000, 1850, 1700 kcal). Use the numbers above as a sanity check for your size.</p>`;
 }
+return calc;
+}
+function viewSetup(){
+const s=S.settings;
 return`
 <div class="card"><h2>Setup</h2>
 <div class="row">
@@ -453,7 +455,7 @@ return`
 <div class="grow"><label>Training days per week</label><select id="sp">${[3,4,5].map(n=>`<option value="${n}" ${n===s.split?'selected':''}>${n} days</option>`).join('')}</select></div>
 <div class="grow"><label>Meals per day</label><select id="sm">${[3,4,5].map(n=>`<option value="${n}" ${n===s.meals?'selected':''}>${n} meals</option>`).join('')}</select></div>
 <div class="grow"><label>Food units</label><select id="su"><option value="g" ${s.units==='g'?'selected':''}>Grams</option><option value="oz" ${s.units==='oz'?'selected':''}>Ounces</option></select></div></div>
-${calc}
+<div id="calc">${calcHtml(parseFloat(s.weight))}</div>
 <div style="margin-top:14px"><button class="btn" id="sv">Save and start</button></div>
 </div>
 <div class="card"><h2>How it works</h2>
@@ -461,8 +463,7 @@ ${calc}
 </div>`;
 }
 function bindSetup(){
-$('#sw').oninput=e=>{S.settings.weight=e.target.value};
-$('#sw').onchange=()=>{save();render()};
+$('#sw').oninput=e=>{S.settings.weight=e.target.value;$('#calc').innerHTML=calcHtml(parseFloat(e.target.value));save()};
 $('#sv').onclick=()=>{
 S.settings.start=$('#sd').value||TODAY;
 S.settings.weight=$('#sw').value;
