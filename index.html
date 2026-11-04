@@ -25,6 +25,10 @@ nav button.on{color:var(--accent);border-bottom-color:var(--accent)}
 main{max-width:900px;margin:0 auto;padding:14px 16px 60px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
 .card h2{margin:0 0 10px;font-size:17px;color:var(--accent)}
+.card h2.ch{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;-webkit-user-select:none}
+.card.collapsed h2.ch{margin-bottom:0}
+.chev{font-size:13px;color:var(--mute);width:14px}
+.csum{margin-left:auto;font-size:13px;font-weight:500;color:var(--mute);text-align:right}
 .card h3{margin:14px 0 6px;font-size:15px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .grow{flex:1;min-width:120px}
@@ -61,6 +65,7 @@ td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
 .food:last-child{border-bottom:0}
 #savedtoast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--good);color:#000;padding:8px 18px;border-radius:20px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}
 #savedtoast.show{opacity:1}
+@media print{.cbody{display:block!important}}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
 .stat{background:#0f0f0f;border:1px solid var(--line);border-radius:10px;padding:10px}
 .stat b{display:block;font-size:22px}
@@ -342,8 +347,8 @@ const SUPPS=[
 ];
 const SUPP_WARN='Supplements are optional. Check with your doctor first, especially if you take medication or have a health condition.';
 
-function defaults(){return{settings:{start:TODAY,weight:'',split:4,meals:3,units:'g',setup:false,trainDays:[],gym:'full',equip:[],level:'new',sex:'',age:''},days:{},lifts:{},meals:[],checkins:{}}}
-function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r&&r.settings)return{settings:Object.assign(defaults().settings,r.settings),days:r.days||{},lifts:r.lifts||{},meals:r.meals||[],checkins:r.checkins||{}}}catch(e){}return defaults()}
+function defaults(){return{settings:{start:TODAY,weight:'',split:4,meals:3,units:'g',setup:false,trainDays:[],gym:'full',equip:[],level:'new',sex:'',age:''},days:{},lifts:{},meals:[],checkins:{},collapsed:{},collapsedDate:''}}
+function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r&&r.settings)return{settings:Object.assign(defaults().settings,r.settings),days:r.days||{},lifts:r.lifts||{},meals:r.meals||[],checkins:r.checkins||{},collapsed:r.collapsed||{},collapsedDate:r.collapsedDate||''}}catch(e){}return defaults()}
 let S=load();
 let _tt;
 function flashSaved(){
@@ -655,6 +660,8 @@ const stepPct=Math.min(100,(Number(d.steps)||0)/10000*100);
 const sl=parseFloat(d.sleep);
 let slH=isNaN(sl)?'':Math.floor(sl),slM=isNaN(sl)?'':Math.round((sl-Math.floor(sl))*60);
 if(slM===60){slM=0;slH=slH+1}
+const stN=Number(d.steps)||0;
+const spCount=SUPPS.filter((s,i)=>d.supps[i]).length;
 const wg=waterGoal(cur),wa=Number(d.water)||0,wp=Math.min(100,wg?wa/wg*100:0);
 const SM=S.meals||[];
 const yd=S.days[addDays(cur,-1)];
@@ -665,25 +672,26 @@ ${backupDue?'<div class="tip"><b>Back up your data.</b> It is saved only in this
 <div class="card">
 <div class="row"><button class="btn alt sm" id="prev">&lt;</button><input type="date" id="dt" value="${cur}" class="grow"><button class="btn alt sm" id="next">&gt;</button><button class="btn sm" id="tod">Today</button></div>
 <p style="margin:10px 0 0"><span class="pill y">${wl}</span><span class="pill">${ph.label} targets</span></p>
+<div class="row" style="margin-top:10px"><button class="btn alt sm" id="cola">Collapse all</button><button class="btn alt sm" id="expa">Expand all</button></div>
 </div>
-<div class="card"><h2>Morning</h2>
+<div class="card"><h2 data-sum="${esc((d.weight!==''?d.weight+' lb':'no weight')+(isNaN(sl)?'':', '+slH+'h '+slM+'m'))}">Morning</h2>
 <div class="row"><div class="grow"><label>Morning weight (lb), after the bathroom and before eating</label><input id="wt" type="number" inputmode="decimal" step="0.1" value="${esc(d.weight)}"></div></div>
 <label style="margin-top:10px">Hours slept last night (optional)</label>
 <div class="row" style="flex-wrap:nowrap;align-items:center"><input id="slh" type="number" inputmode="numeric" min="0" max="24" placeholder="hours" value="${slH}" style="max-width:110px"><span class="mute">h</span><input id="slm" type="number" inputmode="numeric" min="0" max="59" placeholder="min" value="${slM}" style="max-width:110px"><span class="mute">min</span></div>
 <p class="mute" style="margin:6px 0 0">Aim for ${sleepTarget()} hours. Use your smart ring or watch total (like 6 h 13 min), or your best guess. Skip it if you do not track sleep.</p>
 <div class="row" style="margin-top:12px;align-items:center"><button class="btn" id="msv">Save</button><span id="msst" class="mute">${d.weight!==''||d.sleep!==''?'Saved':''}</span></div>
 </div>
-<div class="card"><h2>Today's Plan</h2>
+<div class="card"><h2 data-sum="${esc(wo?shortName(wo.name)+(d.workout?' (done)':''):'Rest day')}">Today's Plan</h2>
 <div class="check"><div class="grow"><b>Workout:</b> ${wo?esc(wo.name)+(d.workout?' (done)':''):'Rest day.'+(nx?' Next: '+esc(nx.x.name)+' on '+WD[pd(addDays(cur,nx.k)).getDay()]:'')}</div><button class="btn sm" id="gotrain">Open</button></div>
 <div class="check"><input type="checkbox" id="wk" ${d.workout?'checked':''}><label style="margin:0;color:var(--text)">Workout completed</label></div>
 <div class="check"><div class="grow"><b>Food:</b> ${ph.kcal} kcal, ${ph.p}g protein, ${ph.c}g carbs, ${ph.f}g fat</div><button class="btn alt sm" id="gomeals">Meals</button></div>
 <details><summary>Show today's meals</summary>${ph.plans[S.settings.meals].rows.map((m,i)=>`<p class="mute" style="margin:6px 0"><b>${i+1}.</b> ${m[0]}<br>${conv(m[1])}</p>`).join('')}</details>
 </div>
-<div class="card"><h2>Daily Targets</h2>
+<div class="card"><h2 data-sum="${Math.round(t.k)} / ${ph.kcal} kcal">Daily Targets</h2>
 <div id="goalbox">${goalBanner(t,ph)}</div>
 ${macroBar('Calories',t.k,ph.kcal,'')}${macroBar('Protein',t.p,ph.p,'g')}${macroBar('Carbs',t.c,ph.c,'g')}${macroBar('Fat',t.f,ph.f,'g')}
 </div>
-<div class="card"><h2>Log Food</h2>
+<div class="card"><h2 data-sum="${d.food.length} item${d.food.length===1?'':'s'} logged">Log Food</h2>
 <div id="goalbox2">${goalBanner(t,ph)}</div>
 <div class="row"><div class="grow" style="flex:2;min-width:160px"><label>Food</label><input id="fn" autocomplete="off" placeholder="e.g. 2 eggs, 200g chicken breast"></div>
 <div class="grow"><label>Calories (auto if blank)</label><input id="fk" type="number" inputmode="decimal" min="0"></div>
@@ -700,18 +708,22 @@ ${RF.length?`<p class="mute" style="margin:10px 0 4px">Tap to add again:</p><div
 <div style="margin-top:10px">${d.food.length?d.food.map((x,i)=>`<div class="food"><input type="checkbox" data-sel="${i}" aria-label="Select ${esc(x.n||'Food')}" style="width:auto;margin-right:8px"><span style="flex:1">${esc(x.n||'Food')}<br><span class="mute">${Math.round(x.k)} kcal | P ${Math.round(x.p)} | C ${Math.round(x.c)} | F ${Math.round(x.f)}</span></span><button class="btn danger sm" data-del="${i}">Remove</button></div>`).join(''):'<p class="mute">Nothing logged yet.</p>'}</div>
 ${d.food.length?'<div class="row" style="margin-top:10px"><div class="grow" style="flex:2;min-width:160px"><label>Save as a meal (tick items above, or leave blank to save all)</label><input id="mn" placeholder="e.g. Breakfast"></div><button class="btn alt" id="msave">Save meal</button></div>':''}
 </div>
-<div class="card"><h2>Water</h2>
+<div class="card"><h2 data-sum="${Math.round(wa)} / ${wg} oz">Water</h2>
 <div class="goal ${wa>=wg?'':''}"><div class="t"><span>You've had <b>${Math.round(wp)}%</b> of your water goal</span><span>${Math.round(wa)} / ${wg} oz</span></div><div class="bar big"><i style="width:${wp}%"></i></div><p>${wa>=wg?'Goal reached. Nice work.':(wg-wa)+' oz to go. Sip through the day.'}</p></div>
 <div class="seg" id="wat"><button data-w="8" style="flex:none">+8 oz</button><button data-w="16" style="flex:none">+16 oz</button><button data-w="24" style="flex:none">+24 oz</button><button data-w="32" style="flex:none">+32 oz</button><button data-w="-8" class="alt" style="flex:none">-8 oz</button></div>
 <p class="mute" style="margin:0">Goal is about 0.6 oz per lb of body weight, plus 16 oz on workout days. 8 oz is one cup and a 16 oz bottle is two.</p>
 </div>
-<div class="card"><h2>Supplements</h2>
+<div class="card"><h2 data-sum="${stN.toLocaleString()} / 10,000">Steps</h2>
+<div class="goal"><div class="t"><span>You've walked <b>${Math.round(stepPct)}%</b> of your step goal</span><span>${stN.toLocaleString()} / 10,000</span></div><div class="bar big"><i style="width:${stepPct}%"></i></div><p>${stN>=10000?'Goal reached. Nice work.':(10000-stN).toLocaleString()+' steps to go.'}</p></div>
+<div class="row"><div class="grow"><label>Total steps so far (from your phone or watch)</label><input id="st" type="number" inputmode="numeric" value="${esc(d.steps)}"></div></div>
+<div class="seg" id="stp" style="margin-top:10px"><button data-s="500" style="flex:none">+500</button><button data-s="1000" style="flex:none">+1,000</button><button data-s="2500" style="flex:none">+2,500</button><button data-s="5000" style="flex:none">+5,000</button><button data-s="-500" class="alt" style="flex:none">-500</button></div>
+<p class="mute" style="margin:0">Update it as the day goes. Type the total from your phone, or tap to add a walk.</p>
+</div>
+<div class="card"><h2 data-sum="${spCount} / ${SUPPS.length} taken">Supplements</h2>
 ${SUPPS.map((s,i)=>`<div class="check"><input type="checkbox" data-sp="${i}" ${d.supps[i]?'checked':''}><label style="margin:0;color:var(--text)">${s[0]} <span class="mute">${s[1]}</span></label>${shop(s[0])}</div>`).join('')}
 <p class="mute" style="margin-bottom:0">${SUPP_WARN}</p>
 </div>
-<div class="card"><h2>Evening Wrap-up</h2>
-<div class="row"><div class="grow"><label>Steps (goal 10,000)</label><input id="st" type="number" inputmode="numeric" value="${esc(d.steps)}"></div></div>
-<div class="bar" style="margin:10px 0"><i style="width:${stepPct}%"></i></div>
+<div class="card"><h2 data-sum="${esc((d.photo?'photo ':'')+(d.notes?'notes':''))}">Evening Wrap-up</h2>
 <div class="check"><input type="checkbox" id="ph" ${d.photo?'checked':''}><label style="margin:0;color:var(--text)">Progress photo taken (weekly or bi-weekly, same lighting)</label></div>
 <label>Notes</label><textarea id="nt">${esc(d.notes)}</textarea>
 <details style="margin-top:12px"><summary>Optional: how you feel and habits</summary>
@@ -781,13 +793,13 @@ S.meals.push({n:nm,items});save();render();
 if($('#gocheck'))$('#gocheck').onclick=()=>{tab='progress';render();window.scrollTo(0,0)};
 $('#gotrain').onclick=()=>{trainDay=TI;tab='train';render();window.scrollTo(0,0)};
 $('#gomeals').onclick=()=>{window._mp=undefined;tab='meals';render();window.scrollTo(0,0)};
-$('#wt').oninput=e=>{day(cur).weight=e.target.value;save(true)};
-$('#wt').onchange=e=>{day(cur).weight=e.target.value;save()};
+$('#wt').oninput=e=>{day(cur).weight=e.target.value;save(true);morningSum()};
+$('#wt').onchange=e=>{day(cur).weight=e.target.value;save();morningSum()};
 const sleepSet=()=>{
 const hv=$('#slh').value,mv=$('#slm').value;
 if(hv===''&&mv==='')day(cur).sleep='';
 else day(cur).sleep=String(+((parseFloat(hv)||0)+(parseFloat(mv)||0)/60).toFixed(2));
-save(true);
+save(true);morningSum();
 };
 $('#slh').oninput=sleepSet;$('#slm').oninput=sleepSet;
 $('#slh').onchange=()=>{sleepSet();flashSaved()};$('#slm').onchange=()=>{sleepSet();flashSaved()};
@@ -800,15 +812,21 @@ $('#msst').textContent='Saved at '+new Date().toLocaleTimeString([],{hour:'numer
 document.querySelectorAll('#wat button').forEach(b=>b.onclick=()=>{
 const x=day(cur);x.water=Math.max(0,(Number(x.water)||0)+(+b.dataset.w));save();render();
 });
+$('#st').oninput=e=>{day(cur).steps=e.target.value;save(true)};
 $('#st').onchange=e=>{day(cur).steps=e.target.value;save();render()};
-$('#wk').onchange=e=>{day(cur).workout=e.target.checked;save()};
+document.querySelectorAll('#stp button').forEach(b=>b.onclick=()=>{
+const x=day(cur);x.steps=String(Math.max(0,(Number(x.steps)||0)+(+b.dataset.s)));save();render();
+});
+if($('#cola'))$('#cola').onclick=()=>{document.querySelectorAll('#view .ch').forEach(x=>{S.collapsed[x.dataset.key]=true});save(true);render()};
+if($('#expa'))$('#expa').onclick=()=>{Object.keys(S.collapsed).forEach(k=>{if(k.indexOf('today:')===0)delete S.collapsed[k]});save(true);render()};
+$('#wk').onchange=e=>{day(cur).workout=e.target.checked;save();const w0=workoutOn(cur);setSum("today:Today's Plan",w0?shortName(w0.name)+(e.target.checked?' (done)':''):'Rest day')};
 $('#ph').onchange=e=>{day(cur).photo=e.target.checked;save()};
 $('#nt').onchange=e=>{day(cur).notes=e.target.value;save()};
 $('#en').onchange=e=>{day(cur).energy=e.target.value;save()};
 $('#rc').onchange=e=>{day(cur).recov=e.target.value;save()};
 $('#al').onchange=e=>{day(cur).alc=e.target.value;save()};
 $('#sg').onchange=e=>{day(cur).sug=e.target.value;save()};
-document.querySelectorAll('[data-sp]').forEach(c=>c.onchange=()=>{day(cur).supps[c.dataset.sp]=c.checked;save()});
+document.querySelectorAll('[data-sp]').forEach(c=>c.onchange=()=>{day(cur).supps[c.dataset.sp]=c.checked;save();setSum('today:Supplements',SUPPS.filter((s,i)=>day(cur).supps[i]).length+' / '+SUPPS.length+' taken')});
 }
 
 const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
@@ -1211,7 +1229,7 @@ $('#imp').onclick=()=>$('#file').click();
 $('#file').onchange=e=>{
 const f=e.target.files[0];if(!f)return;
 const r=new FileReader();
-r.onload=()=>{try{const o=JSON.parse(r.result);if(!o.settings||!o.days)throw 0;S={settings:Object.assign(defaults().settings,o.settings),days:o.days,lifts:o.lifts||{},meals:o.meals||[],checkins:o.checkins||{}};save();render()}catch(x){alert('That file is not a valid backup.')}};
+r.onload=()=>{try{const o=JSON.parse(r.result);if(!o.settings||!o.days)throw 0;S={settings:Object.assign(defaults().settings,o.settings),days:o.days,lifts:o.lifts||{},meals:o.meals||[],checkins:o.checkins||{},collapsed:o.collapsed||{},collapsedDate:o.collapsedDate||''};save();render()}catch(x){alert('That file is not a valid backup.')}};
 r.readAsText(f);
 };
 $('#rst').onclick=()=>{if(confirm('Erase all saved data in this browser?')){S=defaults();save();tab='setup';render()}};
@@ -1463,11 +1481,62 @@ document.querySelectorAll('[data-log]').forEach(b=>b.onclick=()=>{cur=b.dataset.
 }
 
 const VIEWS={today:[viewToday,bindToday],cal:[viewCal,bindCal],meals:[viewMeals,bindMeals],train:[viewTrain,bindTrain],progress:[viewProgress,bindProgress],guide:[viewGuide,()=>{}],setup:[viewSetup,bindSetup]};
+function setSum(key,text){
+try{
+const hd=document.querySelector('#view h2[data-key="'+key+'"]');
+if(!hd)return;
+hd.setAttribute('data-sum',text);
+if(hd.parentElement.classList.contains('collapsed'))hd.querySelector('.csum').textContent=text;
+}catch(x){}
+}
+function morningSum(){
+const d=day(cur),s=parseFloat(d.sleep);
+let H=isNaN(s)?'':Math.floor(s),M=isNaN(s)?'':Math.round((s-Math.floor(s))*60);
+if(M===60){M=0;H=H+1}
+setSum('today:Morning',(d.weight!==''?d.weight+' lb':'no weight')+(isNaN(s)?'':', '+H+'h '+M+'m'));
+}
+function applyCollapse(){
+try{
+if(S.collapsedDate!==TODAY){Object.keys(S.collapsed||{}).forEach(k=>{if(k.indexOf('today:')===0)delete S.collapsed[k]});S.collapsedDate=TODAY}
+S.collapsed=S.collapsed||{};
+document.querySelectorAll('#view .card').forEach(card=>{
+const hd=card.firstElementChild;
+if(!hd||hd.tagName!=='H2')return;
+const key=tab+':'+hd.textContent.trim();
+const body=document.createElement('div');
+body.className='cbody';
+while(hd.nextSibling)body.appendChild(hd.nextSibling);
+card.appendChild(body);
+const chev=document.createElement('span');chev.className='chev';
+const sum=document.createElement('span');sum.className='csum';
+const label=document.createElement('span');label.textContent=hd.textContent;
+hd.textContent='';hd.appendChild(chev);hd.appendChild(label);hd.appendChild(sum);
+hd.classList.add('ch');hd.dataset.key=key;hd.setAttribute('role','button');hd.tabIndex=0;
+const set=c=>{
+body.style.display=c?'none':'';
+card.classList.toggle('collapsed',c);
+sum.textContent=c?(hd.getAttribute('data-sum')||''):'';
+chev.textContent=c?'\u25B8':'\u25BE';
+hd.setAttribute('aria-expanded',c?'false':'true');
+};
+set(!!S.collapsed[key]);
+const toggle=()=>{
+const c=!S.collapsed[key];
+if(c)S.collapsed[key]=true;else delete S.collapsed[key];
+save(true);set(c);
+if(!c&&tab==='progress')drawChart();
+};
+hd.onclick=toggle;
+hd.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}};
+});
+}catch(x){}
+}
 function render(){
 renderNav();
 const v=VIEWS[tab];
 $('#view').innerHTML=v[0]();
 v[1]();
+applyCollapse();
 }
 if(typeof navigator!=='undefined'&&navigator.serviceWorker&&typeof location!=='undefined'&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
 window.addEventListener('resize',()=>{if(tab==='progress')drawChart()});
