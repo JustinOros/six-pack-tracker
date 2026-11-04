@@ -32,6 +32,11 @@ button.sm{padding:6px 10px;font-size:13px}
 .bar{height:12px;background:#262626;border-radius:6px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--accent);width:0}
 .bar i.over{background:var(--bad)}
+.bar.big{height:18px;border-radius:9px}
+.goal{margin:0 0 14px}
+.goal .t{display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;font-size:.95rem}
+.goal p{margin:8px 0 0;font-weight:600}
+.goal.over p{color:var(--bad)}
 .mac{margin-bottom:10px}
 .mac .t{display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px}
 .mac .t b{color:var(--text)}
@@ -300,6 +305,16 @@ const over=val>target;
 return`<div class="mac"><div class="t"><span>${label}</span><span><b>${Math.round(val)}</b> / ${target}${unit}</span></div><div class="bar"><i class="${over?'over':''}" style="width:${pct}%"></i></div></div>`;
 }
 
+function goalBanner(t,ph){
+const pct=ph.kcal?t.k/ph.kcal*100:0;
+const left=Math.round(ph.kcal-t.k),pl=Math.round(ph.p-t.p);
+let cls='',msg;
+if(pct<=0&&t.k===0)msg='Nothing logged yet. Log your food to see how much of your daily goal you have eaten.';
+else if(pct<90)msg='Keep going: about '+left+' kcal left'+(pl>0?' and '+pl+'g protein to hit.':'.');
+else if(pct<=105)msg='You are at your goal. Stop eating for the day'+(pl>0?', or finish with about '+pl+'g of lean protein.':'.');
+else{cls='over';msg='Over goal by about '+Math.abs(left)+' kcal. Stop eating for the day.'}
+return`<div class="goal ${cls}"><div class="t"><span>You've consumed <b>${Math.round(pct)}%</b> of your daily goal</span><span>${Math.round(t.k)} / ${ph.kcal} kcal</span></div><div class="bar big"><i class="${pct>105?'over':''}" style="width:${Math.min(100,pct)}%"></i></div><p>${msg}</p></div>`;
+}
 function totals(d){const f=day(d).food;return f.reduce((a,x)=>({k:a.k+x.k,p:a.p+x.p,c:a.c+x.c,f:a.f+x.f}),{k:0,p:0,c:0,f:0})}
 
 const FOODS=[
@@ -521,9 +536,11 @@ return`
 ${backupDue?'<div class="tip"><b>Back up your data.</b> It is saved only in this browser. Go to Progress and tap Export backup.</div>':''}
 </div>
 <div class="card"><h2>Daily Targets</h2>
+<div id="goalbox">${goalBanner(t,ph)}</div>
 ${macroBar('Calories',t.k,ph.kcal,'')}${macroBar('Protein',t.p,ph.p,'g')}${macroBar('Carbs',t.c,ph.c,'g')}${macroBar('Fat',t.f,ph.f,'g')}
 </div>
 <div class="card"><h2>Log Food</h2>
+<div id="goalbox2">${goalBanner(t,ph)}</div>
 <div class="row"><div class="grow" style="flex:2;min-width:160px"><label>Food</label><input id="fn" autocomplete="off" placeholder="e.g. 2 eggs, 200g chicken breast"></div>
 <div class="grow"><label>Calories (auto if blank)</label><input id="fk" type="number" inputmode="decimal" min="0"></div>
 <div class="grow"><label>Protein g</label><input id="fp" type="number" inputmode="decimal" min="0"></div>
