@@ -217,7 +217,38 @@ const EX={
 'Single Leg Hamstring Curl Machine':[1,'15-20','Think heel to glute here'],
 'Reverse Pec Dec Flye':[2,'12-15','Do not let elbows go further back than shoulder line'],
 'Machine Bicep Preacher Curl':[1,'15-20','Ensuring a hard contraction at the top'],
-'Neutral Grip Shoulder Width Cable Row':[2,'6-8 / 10-12','Elbows into armpits, control eccentric']
+'Neutral Grip Shoulder Width Cable Row':[2,'6-8 / 10-12','Elbows into armpits, control eccentric'],
+'Goblet Squat':[2,'10-15','Hold one dumbbell at your chest, sit down between your hips'],
+'Dumbbell Romanian Deadlift':[1,'8-12','Dumbbells slide down your legs, push hips back, feel the hamstrings stretch'],
+'DB Sumo Deadlift':[1,'8-12','Wide stance, hold one dumbbell between your legs, flat back'],
+'DB Bench Press':[2,'6-8 / 10-12','Control eccentric, full ROM'],
+'Plate-Loaded Chest Press':[2,'6-8 / 10-12','Full ROM, avoid full lock out, no spotter needed'],
+'Push-Up':[2,'10-20','Body in a straight line, chest to the floor'],
+'Close-Grip Push-Up':[2,'10-20','Hands under shoulders, elbows tucked'],
+'Pike Push-Up':[2,'8-15','Hips high, lower the top of your head toward the floor'],
+'Pull-Up':[2,'AMRAP','Full hang to chin over the bar, control the lowering'],
+'Chin-Up':[2,'AMRAP','Palms toward you, full hang to chin over the bar'],
+'One Arm DB Row':[2,'8-12 / 12-15','Hand on the bench, pull elbow to hip, hold the squeeze'],
+'Rear Delt DB Flye':[2,'12-15','Bent over, lead with the elbows, do not swing'],
+'EZ Bar Curl':[2,'10-12 / 12-15','Elbows kept in place, no swinging'],
+'Concentration Curl':[1,'12-15','Elbow braced on your inner thigh, hard squeeze at the top'],
+'EZ Bar Skull Crusher':[2,'10-12','Lying on the bench, lower to your forehead, elbows pointed up'],
+'DB Overhead Tricep Extension':[2,'10-15','Hold one dumbbell with both hands, elbows close to your head'],
+'Bench Dip':[2,'10-15','Hands on the bench behind you, lower until elbows reach 90 degrees'],
+'Bulgarian Split Squat':['2/leg','10-15','Back foot on the bench, hold dumbbells, slow lowering'],
+'Reverse Lunge':['2/leg','10-15','Step back, lower the back knee close to the floor'],
+'Bodyweight Squat':[2,'20+','Full depth, slow lowering'],
+'Single Leg Romanian Deadlift':['2/leg','10-12','Hold a dumbbell, hinge at the hip, back leg extends behind you'],
+'Single Leg Glute Bridge':['2/leg','12-20','Drive through the heel, squeeze the glute at the top'],
+'Standing Calf Raise':[2,'15-25','Hold a dumbbell if you can, pause at the top and stretch at the bottom'],
+'Hanging Knee Raise':[2,'12-20','Do not swing, curl the hips up and lower slowly'],
+'Hanging Leg Raise':[2,'8-15','Legs as straight as you can, control the lowering'],
+'Crunch':[2,'20+','Exhale hard at the top, pause for a second'],
+'Band Lateral Raise':[2,'15-20','Stand on the band, lead with the elbow'],
+'Band Pull-Apart':[2,'15-25','Arms straight, pull the band to your chest'],
+'Band Row':[2,'12-15','Anchor the band, hold in the contracted position'],
+'Band Tricep Pushdown':[2,'12-15','Anchor the band overhead, elbow kept in place'],
+'Band Bicep Curl':[2,'12-15','Stand on the band, elbow kept in place']
 };
 const SPLITS={
 3:[['Day 1 - Full Body A',['Barbell Back Squat','Incline Smith Chest Press','Bent Over DB Row','Romanian Deadlift','Single Arm Cable Lateral Raise','Cable EZ Bicep Curl']],
@@ -233,6 +264,61 @@ const SPLITS={
 ['Day 4 - Upper (Chest, Back, Shoulders, Arms)',['Incline Barbell Press','Neutral Grip Shoulder Width Cable Row','DB Shoulder Press','Rope Tricep Pushdown','Single Arm Cable Lateral Raise','Cable EZ Bicep Curl']],
 ['Day 5 - Legs (Quads, Hamstrings, Glutes, Calves)',['Single Leg Quad Extension','Leg Press','Barbell Deadlift','Smith Bulgarian Split Squat','Toe Press on Leg Press','Single Leg Hamstring Curl Machine']]]
 };
+
+const EQUIP=[['db','Dumbbells'],['bench','Flat bench'],['incl','Adjustable (incline) bench'],['bb','Barbell and plates'],['rack','Squat rack or power rack'],['ez','Curl bar (EZ bar)'],['pcp','Plate-loaded chest press machine'],['pu','Pull-up bar (included on power towers)'],['dip','Dip bars (included on power towers)'],['kr','Knee raise station (included on power towers)'],['band','Resistance bands'],['cab','Cable machine'],['lp','Leg press machine'],['sm','Smith machine']];
+const ORIGREQ={'Barbell Back Squat':['bb','rack'],'Incline Smith Chest Press':['sm'],'Bent Over DB Row':['db'],'Romanian Deadlift':['bb'],'Single Arm Cable Lateral Raise':['cab'],'Cable EZ Bicep Curl':['cab'],'Machine Flat Chest Press':['pcp'],'Seated Cable Row':['cab'],'Hamstring Curl Machine':['x'],'DB Lateral Raise':['db'],'Rope Cable Crunch':['cab'],'Leg Press':['lp'],'Incline DB Press':['db','incl'],'Barbell Row':['bb'],'Quad Extension':['x'],'Chest Supported DB Side Raise':['db','incl'],'Incline DB Curl':['db','incl'],'Incline Barbell Press':['bb','rack','incl'],'Straight Bar Lat Pulldown':['cab'],'DB Shoulder Press':['db'],'Rope Tricep Pushdown':['cab'],'Machine Calf Raise':['x'],'Single Arm Cable Row':['cab'],'High Incline Smith Press':['sm'],'Dips':['dip'],'Standing DB Side Raise':['db'],'Seated Alternating DB Curl':['db'],'Single Leg Quad Extension':['x'],'Barbell Deadlift':['bb'],'Smith Bulgarian Split Squat':['sm'],'Toe Press on Leg Press':['x'],'Single Leg Hamstring Curl Machine':['x'],'Reverse Pec Dec Flye':['x'],'Machine Bicep Preacher Curl':['x'],'Neutral Grip Shoulder Width Cable Row':['cab']};
+const SUBREQ={'Goblet Squat':['db'],'Dumbbell Romanian Deadlift':['db'],'DB Sumo Deadlift':['db'],'DB Bench Press':['db','bench'],'Plate-Loaded Chest Press':['pcp'],'Push-Up':[],'Close-Grip Push-Up':[],'Pike Push-Up':[],'Pull-Up':['pu'],'Chin-Up':['pu'],'One Arm DB Row':['db'],'Rear Delt DB Flye':['db'],'EZ Bar Curl':['ez'],'Concentration Curl':['db'],'EZ Bar Skull Crusher':['ez','bench'],'DB Overhead Tricep Extension':['db'],'Bench Dip':['bench'],'Bulgarian Split Squat':['db','bench'],'Reverse Lunge':[],'Bodyweight Squat':[],'Single Leg Romanian Deadlift':['db'],'Single Leg Glute Bridge':[],'Standing Calf Raise':[],'Hanging Knee Raise':['kr'],'Hanging Leg Raise':['pu'],'Crunch':[],'Band Lateral Raise':['band'],'Band Pull-Apart':['band'],'Band Row':['band'],'Band Tricep Pushdown':['band'],'Band Bicep Curl':['band']};
+const CHEST=['Plate-Loaded Chest Press','DB Bench Press','Push-Up'];
+const ALT={
+'Barbell Back Squat':['Goblet Squat','Bulgarian Split Squat','Bodyweight Squat'],
+'Incline Smith Chest Press':['Incline DB Press'].concat(CHEST),
+'Romanian Deadlift':['Dumbbell Romanian Deadlift','Single Leg Glute Bridge'],
+'Single Arm Cable Lateral Raise':['DB Lateral Raise','Band Lateral Raise','Pike Push-Up'],
+'Cable EZ Bicep Curl':['EZ Bar Curl','Seated Alternating DB Curl','Band Bicep Curl','Chin-Up'],
+'Machine Flat Chest Press':CHEST,
+'Seated Cable Row':['One Arm DB Row','Band Row','Chin-Up'],
+'Hamstring Curl Machine':['Dumbbell Romanian Deadlift','Single Leg Glute Bridge'],
+'DB Lateral Raise':['Band Lateral Raise','Pike Push-Up'],
+'Rope Cable Crunch':['Hanging Knee Raise','Hanging Leg Raise','Crunch'],
+'Leg Press':['Goblet Squat','Bulgarian Split Squat','Bodyweight Squat'],
+'Incline DB Press':CHEST,
+'Barbell Row':['One Arm DB Row','Pull-Up','Band Row'],
+'Quad Extension':['Bulgarian Split Squat','Goblet Squat','Bodyweight Squat'],
+'Chest Supported DB Side Raise':['DB Lateral Raise','Band Lateral Raise','Pike Push-Up'],
+'Incline DB Curl':['EZ Bar Curl','Seated Alternating DB Curl','Chin-Up','Band Bicep Curl'],
+'Incline Barbell Press':['Incline DB Press'].concat(CHEST),
+'Straight Bar Lat Pulldown':['Pull-Up','Chin-Up','One Arm DB Row','Band Pull-Apart'],
+'DB Shoulder Press':['Pike Push-Up'],
+'Rope Tricep Pushdown':['EZ Bar Skull Crusher','DB Overhead Tricep Extension','Dips','Band Tricep Pushdown','Close-Grip Push-Up'],
+'Machine Calf Raise':['Standing Calf Raise'],
+'Single Arm Cable Row':['One Arm DB Row','Chin-Up','Band Row'],
+'High Incline Smith Press':['Incline DB Press'].concat(CHEST),
+'Dips':['Bench Dip','Close-Grip Push-Up'],
+'Standing DB Side Raise':['Band Lateral Raise','Pike Push-Up'],
+'Seated Alternating DB Curl':['EZ Bar Curl','Chin-Up','Band Bicep Curl'],
+'Single Leg Quad Extension':['Bulgarian Split Squat','Reverse Lunge','Bodyweight Squat'],
+'Barbell Deadlift':['DB Sumo Deadlift','Dumbbell Romanian Deadlift','Single Leg Glute Bridge'],
+'Smith Bulgarian Split Squat':['Bulgarian Split Squat','Reverse Lunge'],
+'Toe Press on Leg Press':['Standing Calf Raise'],
+'Single Leg Hamstring Curl Machine':['Single Leg Romanian Deadlift','Single Leg Glute Bridge'],
+'Reverse Pec Dec Flye':['Rear Delt DB Flye','Band Pull-Apart'],
+'Machine Bicep Preacher Curl':['EZ Bar Curl','Concentration Curl','Chin-Up','Band Bicep Curl'],
+'Neutral Grip Shoulder Width Cable Row':['One Arm DB Row','Chin-Up','Band Row']
+};
+function owns(id){const e=S.settings.equip||[];if(id==='bench')return e.includes('bench')||e.includes('incl');return e.includes(id)}
+function reqOk(n){const r=ORIGREQ[n]||SUBREQ[n]||[];return r.every(owns)}
+function homeMode(){return S.settings.gym==='home'}
+function resolveList(list){
+if(!homeMode())return list;
+const out=[];
+list.forEach(n=>{
+const c=[n].concat(ALT[n]||[]);
+let pick=c.find(x=>!out.includes(x)&&reqOk(x));
+if(!pick)pick=c.find(x=>!out.includes(x))||n;
+out.push(pick);
+});
+return out;
+}
 const SUPPS=[
 ['Creatine monohydrate','5 g daily','Improved strength, muscular fullness, power output, recovery','Performance'],
 ['Caffeine','100-200 mg pre workout','Boosts focus, alertness, strength, and fat burning','Performance'],
@@ -244,7 +330,7 @@ const SUPPS=[
 ];
 const SUPP_WARN='Supplements are optional. Check with your doctor first, especially if you take medication or have a health condition.';
 
-function defaults(){return{settings:{start:TODAY,weight:'',split:4,meals:3,units:'g',setup:false,trainDays:[]},days:{},lifts:{}}}
+function defaults(){return{settings:{start:TODAY,weight:'',split:4,meals:3,units:'g',setup:false,trainDays:[],gym:'full',equip:[]},days:{},lifts:{}}}
 function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r&&r.settings)return{settings:Object.assign(defaults().settings,r.settings),days:r.days||{},lifts:r.lifts||{}}}catch(e){}return defaults()}
 let S=load();
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
@@ -266,7 +352,7 @@ let c=0;
 for(let x=pd(S.settings.start);x<dt;x.setDate(x.getDate()+1))if(td.includes(x.getDay()))c++;
 return c%SPLITS[S.settings.split].length;
 }
-function workoutOn(d){const i=workoutIdx(d);if(i===null)return null;const w=SPLITS[S.settings.split][i];return{i,name:w[0],list:w[1]}}
+function workoutOn(d){const i=workoutIdx(d);if(i===null)return null;const w=SPLITS[S.settings.split][i];return{i,name:w[0],list:resolveList(w[1])}}
 function nextWorkoutIdx(){for(let k=0;k<8;k++){const w=workoutOn(addDays(TODAY,k));if(w)return w.i}return 0}
 function shortName(n){return n.replace(/^Day \d+ - /,'').replace(/ \(.*\)$/,'')}
 function weekLabel(d){const w=weekNum(d);return w<1?'Before start':w>16?'After plan':'Week '+w+' of 16'}
@@ -740,6 +826,7 @@ return`
 <div class="card"><h2>${S.settings.split} Day Training</h2>
 <div class="seg" id="spl">${[3,4,5].map(n=>`<button data-s="${n}" class="${n===S.settings.split?'on':''}">${n} days</button>`).join('')}</div>
 <div class="seg" id="tdy">${sp.map((x,i)=>`<button data-d="${i}" class="${i===trainDay?'on':''}">Day ${i+1}</button>`).join('')}</div>
+${homeMode()?'<div class="tip"><b>Home gym mode.</b> Exercises are swapped to match the equipment you checked in Setup.</div>':''}
 <p class="mute" style="margin:0">Log your best set as weight x reps (example: 85 x 7). Entries save under today's date and the last entry is shown under each box. The workout shown first is the next one in your rotation.</p>
 <details><summary>New to lifting? Read this first</summary>
 <p class="mute"><b>Sets and reps:</b> a rep is one full lift and lower. A set is a group of reps done without resting. The number under Sets is how many working sets to do.</p>
@@ -763,8 +850,8 @@ return`
 </div>
 <div class="card"><h2>${esc(dd[0])}</h2>
 <div class="scroll"><table><tr><th>Exercise</th><th>Sets</th><th>Reps</th><th>Today's log</th></tr>
-${dd[1].map(n=>{const e=EX[n],l=lastLift(n);const todays=(S.lifts[n]||[]).find(x=>x.d===TODAY);
-return`<tr><td><b>${n}</b> <a class="vid" href="https://www.youtube.com/results?search_query=${encodeURIComponent('how to '+n+' exercise form')}" target="_blank" rel="noopener noreferrer" title="Watch how to do ${esc(n)}" aria-label="Watch how to do ${esc(n)}">&#9654;</a><div class="mute">${e[2]}</div></td><td>${e[0]}</td><td>${e[1]}</td><td style="min-width:130px"><input data-lift="${esc(n)}" value="${todays?esc(todays.v):''}" placeholder="lb x reps"><div class="last">${l?'Last: '+esc(l.v)+' ('+l.d+')':'No history'}</div></td></tr>`}).join('')}
+${resolveList(dd[1]).map(n=>{const e=EX[n],l=lastLift(n);const todays=(S.lifts[n]||[]).find(x=>x.d===TODAY);
+return`<tr><td><b>${n}</b> <a class="vid" href="https://www.youtube.com/results?search_query=${encodeURIComponent('how to '+n+' exercise form')}" target="_blank" rel="noopener noreferrer" title="Watch how to do ${esc(n)}" aria-label="Watch how to do ${esc(n)}">&#9654;</a><div class="mute">${e[2]}</div>${reqOk(n)?'':'<div class="mute" style="color:var(--bad)">You have not checked the equipment for this one. Update Setup or skip it.</div>'}</td><td>${e[0]}</td><td>${e[1]}</td><td style="min-width:130px"><input data-lift="${esc(n)}" value="${todays?esc(todays.v):''}" placeholder="lb x reps"><div class="last">${l?'Last: '+esc(l.v)+' ('+l.d+')':'No history'}</div></td></tr>`}).join('')}
 </table></div></div>
 <div class="card"><h2>Progressive Overload</h2>
 <p class="mute">Each week try to beat your last performance in one of these ways:</p>
@@ -975,6 +1062,14 @@ return`
 <div id="calc">${calcHtml(parseFloat(s.weight))}</div>
 <div style="margin-top:14px"><button class="btn" id="sv">Save and start</button></div>
 </div>
+<div class="card"><h2>Where do you train?</h2>
+<div class="seg" id="gymsel"><button data-g="full" class="${s.gym==='home'?'':'on'}">Full gym</button><button data-g="home" class="${s.gym==='home'?'on':''}">Home gym</button></div>
+<div id="eqbox" style="display:${s.gym==='home'?'block':'none'}">
+<p class="mute" style="margin:0 0 8px">Check everything you own. Workouts are swapped to use only what you have. Bodyweight options fill any gaps.</p>
+${EQUIP.map(e=>`<div class="check"><input type="checkbox" id="eq_${e[0]}" data-eq="${e[0]}" ${(s.equip||[]).includes(e[0])?'checked':''}><label for="eq_${e[0]}" style="margin:0;color:var(--text)">${e[1]}</label></div>`).join('')}
+</div>
+<p class="mute" id="gymnote" style="margin:8px 0 0">${s.gym==='home'?'':'Full gym uses the original workouts from the plan.'}</p>
+</div>
 <div class="card"><h2>How it works</h2>
 <p class="mute">16 weeks in four phases of 4 weeks. Each phase lowers calories and carbs while protein stays at 180 g. Your data never leaves this browser.</p>
 <ol class="steps">
@@ -998,6 +1093,17 @@ $('#tdnote').textContent=n===m?'':'You picked '+n+' days but this plan has '+m+'
 document.querySelectorAll('#tdw button').forEach(b=>b.onclick=()=>{const i=+b.dataset.wd;window._td=window._td.includes(i)?window._td.filter(x=>x!==i):window._td.concat(i).sort();paint()});
 $('#sp').onchange=()=>{window._td=DEF_TD[+$('#sp').value].slice();paint()};
 paint();
+document.querySelectorAll('#gymsel button').forEach(b=>b.onclick=()=>{
+S.settings.gym=b.dataset.g;save();
+document.querySelectorAll('#gymsel button').forEach(x=>x.classList.toggle('on',x===b));
+$('#eqbox').style.display=S.settings.gym==='home'?'block':'none';
+$('#gymnote').textContent=S.settings.gym==='home'?'':'Full gym uses the original workouts from the plan.';
+});
+document.querySelectorAll('[data-eq]').forEach(c=>c.onchange=()=>{
+const set=new Set(S.settings.equip||[]);
+if(c.checked)set.add(c.dataset.eq);else set.delete(c.dataset.eq);
+S.settings.equip=[...set];save();
+});
 $('#sw').oninput=e=>{S.settings.weight=e.target.value;$('#calc').innerHTML=calcHtml(parseFloat(e.target.value));save()};
 $('#sv').onclick=()=>{
 S.settings.start=$('#sd').value||TODAY;
