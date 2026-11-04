@@ -177,7 +177,7 @@ function defaults(){return{settings:{start:TODAY,weight:'',split:4,meals:3,units
 function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r&&r.settings)return{settings:Object.assign(defaults().settings,r.settings),days:r.days||{},lifts:r.lifts||{}}}catch(e){}return defaults()}
 let S=load();
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-function day(d){if(!S.days[d])S.days[d]={weight:'',steps:'',food:[],supps:{},workout:false,photo:false,notes:''};return S.days[d]}
+function day(d){if(!S.days[d])S.days[d]={weight:'',steps:'',food:[],supps:{},workout:false,photo:false,notes:'',sleep:'',energy:'',recov:'',alc:'',sug:''};return S.days[d]}
 
 let tab=S.settings.setup?'today':'setup';
 let cur=TODAY;
@@ -237,7 +237,18 @@ ${macroBar('Calories',t.k,ph.kcal,'')}${macroBar('Protein',t.p,ph.p,'g')}${macro
 ${SUPPS.map((s,i)=>`<div class="check"><input type="checkbox" data-sp="${i}" ${d.supps[i]?'checked':''}><label style="margin:0;color:var(--text)">${s[0]} <span class="mute">${s[1]}</span></label>${shop(s[0])}</div>`).join('')}
 <p class="mute" style="margin-bottom:0">${SUPP_WARN}</p>
 </div>
-<div class="card"><h2>Notes</h2><label>Energy, recovery, sleep</label><textarea id="nt">${esc(d.notes)}</textarea></div>`;
+<div class="card"><h2>Sleep and Recovery</h2>
+<div class="row">
+<div class="grow"><label>Hours slept last night</label><input id="slp" type="number" inputmode="decimal" step="0.1" min="0" max="24" value="${esc(d.sleep||'')}"></div>
+<div class="grow"><label>Energy (1 low, 5 high)</label><select id="en"><option value="">-</option>${[1,2,3,4,5].map(n=>`<option value="${n}" ${String(d.energy)===String(n)?'selected':''}>${n}</option>`).join('')}</select></div>
+<div class="grow"><label>Recovery (1 sore and drained, 5 fresh)</label><select id="rc"><option value="">-</option>${[1,2,3,4,5].map(n=>`<option value="${n}" ${String(d.recov)===String(n)?'selected':''}>${n}</option>`).join('')}</select></div>
+</div>
+<div class="row" style="margin-top:10px">
+<div class="grow"><label>Alcoholic drinks today</label><input id="al" type="number" inputmode="numeric" min="0" value="${esc(d.alc||'')}"></div>
+<div class="grow"><label>Sugary drinks today (soda, juice, energy)</label><input id="sg" type="number" inputmode="numeric" min="0" value="${esc(d.sug||'')}"></div>
+</div>
+<div class="tip">Aim for 7-9 hours of sleep. If you wear a smart ring, copy your sleep hours here and use the ring's trends, not a single night. See the Guide tab for details.</div>
+<label>Notes</label><textarea id="nt">${esc(d.notes)}</textarea></div>`;
 }
 function bindToday(){
 const go=n=>{cur=n;render()};
@@ -256,6 +267,11 @@ $('#st').onchange=e=>{day(cur).steps=e.target.value;save();render()};
 $('#wk').onchange=e=>{day(cur).workout=e.target.checked;save()};
 $('#ph').onchange=e=>{day(cur).photo=e.target.checked;save()};
 $('#nt').onchange=e=>{day(cur).notes=e.target.value;save()};
+$('#slp').onchange=e=>{day(cur).sleep=e.target.value;save()};
+$('#en').onchange=e=>{day(cur).energy=e.target.value;save()};
+$('#rc').onchange=e=>{day(cur).recov=e.target.value;save()};
+$('#al').onchange=e=>{day(cur).alc=e.target.value;save()};
+$('#sg').onchange=e=>{day(cur).sug=e.target.value;save()};
 document.querySelectorAll('[data-sp]').forEach(c=>c.onchange=()=>{day(cur).supps[c.dataset.sp]=c.checked;save()});
 }
 
@@ -411,8 +427,20 @@ const ks=Object.keys(m).map(Number).sort((a,b)=>a-b);
 let prev=null;
 return ks.map(k=>{const a=m[k].reduce((s,v)=>s+v,0)/m[k].length;const r={w:k,avg:a,n:m[k].length,ch:prev===null?null:a-prev};prev=a;return r});
 }
+function recent7(){
+const sl=[],en=[],rc=[];let al=0,sg=0;
+for(let i=0;i<7;i++){
+const d=S.days[addDays(TODAY,-i)];if(!d)continue;
+const s=parseFloat(d.sleep),e=parseFloat(d.energy),r=parseFloat(d.recov);
+if(!isNaN(s))sl.push(s);if(!isNaN(e))en.push(e);if(!isNaN(r))rc.push(r);
+al+=parseFloat(d.alc)||0;sg+=parseFloat(d.sug)||0;
+}
+const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+const f=a=>a.length?avg(a).toFixed(1):'-';
+return{sl:f(sl),en:f(en),rc:f(rc),al,sg,low:sl.length>=3&&avg(sl)<7};
+}
 function viewProgress(){
-const arr=weights(),rows=weeklyRows(arr);
+const arr=weights(),rows=weeklyRows(arr),R7=recent7();
 const first=arr[0],last=arr[arr.length-1];
 const logged=Object.keys(S.days).filter(k=>{const d=S.days[k];return d.food.length||d.weight!==''||d.workout||d.steps!==''}).length;
 const workouts=Object.keys(S.days).filter(k=>S.days[k].workout).length;
@@ -429,6 +457,16 @@ return`
 <div class="stat"><b>${logged}</b><span>Days logged</span></div>
 <div class="stat"><b>${workouts}</b><span>Workouts done</span></div>
 </div>${tip}</div>
+<div class="card"><h2>Last 7 Days: Sleep and Habits</h2>
+<div class="stats">
+<div class="stat"><b>${R7.sl}</b><span>Avg sleep (hours)</span></div>
+<div class="stat"><b>${R7.en}</b><span>Avg energy (1-5)</span></div>
+<div class="stat"><b>${R7.rc}</b><span>Avg recovery (1-5)</span></div>
+<div class="stat"><b>${R7.al}</b><span>Alcoholic drinks</span></div>
+<div class="stat"><b>${R7.sg}</b><span>Sugary drinks</span></div>
+</div>
+${R7.low?'<div class="tip"><b>Your average sleep is under 7 hours.</b> Fixing this is one of the easiest ways to improve fat loss, hunger and recovery.</div>':''}
+</div>
 <div class="card"><h2>Weight Trend</h2>
 ${arr.length?'<canvas id="cv"></canvas><p class="mute" style="margin-bottom:0">Dots are daily weigh-ins. The line is the 7 day average.</p>':'<p class="mute">Log your morning weight on the Today tab to see your chart.</p>'}
 </div>
@@ -497,6 +535,25 @@ return`
 <div class="scroll"><table><tr><th>Supplement</th><th>Dosage</th><th>Benefits</th></tr>
 ${SUPPS.map(s=>`<tr><td><b>${s[0]}</b> ${shop(s[0])}</td><td>${s[1]}</td><td class="mute">${s[2]}</td></tr>`).join('')}</table></div>
 <p class="mute">${SUPP_WARN}</p>
+</div>
+<div class="card"><h2>Sleep and Recovery</h2>
+<p class="mute">This section goes beyond the original blueprint and is general guidance.</p>
+<h3>Sleep target: 7-9 hours</h3>
+<p class="mute">Aim for at least 7 hours every night. Short sleep while dieting increases hunger and cravings, makes it harder to hold onto muscle, and slows recovery between workouts.</p>
+<div class="tip">Habits that help: same bedtime and wake time every day, a cool dark room (about 65-68 F), no caffeine after about 12:00 PM to 2:00 PM, screens off 30-60 minutes before bed, and your magnesium glycinate in the evening if you take it.</div>
+<h3>What to log each day</h3>
+<div class="scroll"><table><tr><th>Field</th><th>How to score it</th></tr>
+<tr><td>Hours slept</td><td>Total sleep from your ring or phone. If you do not track it, estimate.</td></tr>
+<tr><td>Energy (1-5)</td><td>1 = dragging all day, 3 = normal, 5 = great energy and focus</td></tr>
+<tr><td>Recovery (1-5)</td><td>1 = very sore or drained, 3 = normal, 5 = fresh and ready to train hard</td></tr>
+<tr><td>Notes</td><td>Anything unusual: poor sleep, stress, illness, travel, hunger, a missed meal</td></tr></table></div>
+<h3>Using a smart ring</h3>
+<p class="mute">A ring is useful for trends over weeks, not single nights. The numbers worth watching are sleep duration, bedtime consistency, resting heart rate and HRV. If resting heart rate is up and HRV is down for several days in a row, sleep more and consider an easier training day. Do not chase a perfect score.</p>
+<h3>Should you cut soda, sugar and alcohol?</h3>
+<p class="mute"><b>Soda and sugary drinks:</b> yes, cut them. They add calories without filling you up. Swap in water, sparkling water, black coffee, tea or zero calorie drinks. Juice and energy drinks count too.</p>
+<p class="mute"><b>Added sugar and sweets:</b> you do not need to ban them, but they use up calories fast and hurt your protein and fiber targets. Keep them small and log them if you eat them.</p>
+<p class="mute"><b>Alcohol:</b> the best choice for the 16 weeks is none. It adds calories (a beer is roughly 150 calories, and many cocktails are more), disrupts sleep, slows recovery and makes it easier to overeat. If you do drink, keep it occasional, 1-2 drinks, and log the calories in the food log.</p>
+<p class="mute">General fitness guidance, not medical advice. Talk to your doctor if you have a health condition or take medication.</p>
 </div>
 <div class="card"><h2>Track Other Metrics</h2>
 <div class="scroll"><table><tr><th>Metric</th><th>How to track</th></tr>
