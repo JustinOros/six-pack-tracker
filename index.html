@@ -55,6 +55,8 @@ canvas{width:100%;height:240px;display:block}
 .seg{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .seg button{flex:1;min-width:70px;background:#262626;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px;font-weight:600;cursor:pointer}
 .seg button.on{background:var(--accent);color:#111;border-color:var(--accent)}
+.vid{display:inline-block;background:#e5534b;color:#fff;text-decoration:none;font-size:10px;line-height:1;padding:4px 7px;border-radius:5px;vertical-align:middle;margin-left:4px}
+.vid:hover{background:#ff6b62}
 .last{font-size:12px;color:var(--mute);margin-top:3px}
 footer{max-width:900px;margin:0 auto;padding:0 16px 40px;color:var(--mute);font-size:12px}
 </style>
@@ -295,7 +297,7 @@ return`
 <div class="card"><h2>${esc(dd[0])}</h2>
 <div class="scroll"><table><tr><th>Exercise</th><th>Sets</th><th>Reps</th><th>Today's log</th></tr>
 ${dd[1].map(n=>{const e=EX[n],l=lastLift(n);const todays=(S.lifts[n]||[]).find(x=>x.d===TODAY);
-return`<tr><td><b>${n}</b><div class="mute">${e[2]}</div></td><td>${e[0]}</td><td>${e[1]}</td><td style="min-width:130px"><input data-lift="${esc(n)}" value="${todays?esc(todays.v):''}" placeholder="lb x reps"><div class="last">${l?'Last: '+esc(l.v)+' ('+l.d+')':'No history'}</div></td></tr>`}).join('')}
+return`<tr><td><b>${n}</b> <a class="vid" href="https://www.youtube.com/results?search_query=${encodeURIComponent('how to '+n+' exercise form')}" target="_blank" rel="noopener noreferrer" title="Watch how to do ${esc(n)}" aria-label="Watch how to do ${esc(n)}">&#9654;</a><div class="mute">${e[2]}</div></td><td>${e[0]}</td><td>${e[1]}</td><td style="min-width:130px"><input data-lift="${esc(n)}" value="${todays?esc(todays.v):''}" placeholder="lb x reps"><div class="last">${l?'Last: '+esc(l.v)+' ('+l.d+')':'No history'}</div></td></tr>`}).join('')}
 </table></div></div>
 <div class="card"><h2>Progressive Overload</h2>
 <p class="mute">Each week try to beat your last performance in one of these ways:</p>
