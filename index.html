@@ -57,6 +57,11 @@ canvas{width:100%;height:240px;display:block}
 .seg button.on{background:var(--accent);color:#111;border-color:var(--accent)}
 .vid{display:inline-block;background:#e5534b;color:#fff;text-decoration:none;font-size:10px;line-height:1;padding:4px 7px;border-radius:5px;vertical-align:middle;margin-left:4px}
 .vid:hover{background:#ff6b62}
+.shop{text-decoration:none;font-size:15px;margin-left:4px;vertical-align:middle}
+.shop:hover{filter:brightness(1.4)}
+.sl label{color:var(--text);font-size:15px;margin:0;flex:1;cursor:pointer}
+.sl input:checked+label{text-decoration:line-through;color:var(--mute)}
+.sl input:checked+label b{color:var(--mute)}
 .last{font-size:12px;color:var(--mute);margin-top:3px}
 footer{max-width:900px;margin:0 auto;padding:0 16px 40px;color:var(--mute);font-size:12px}
 </style>
@@ -75,6 +80,8 @@ const pd=s=>{const a=s.split('-').map(Number);return new Date(a[0],a[1]-1,a[2])}
 const addDays=(s,n)=>{const d=pd(s);d.setDate(d.getDate()+n);return ds(d)};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const TODAY=ds(new Date());
+const SHOPQ={'Caffeine':'Caffeine powder'};
+const shop=n=>`<a class="shop" href="https://www.google.com/search?tbm=shop&q=${encodeURIComponent(SHOPQ[n]||n+' supplement')}" target="_blank" rel="noopener noreferrer" title="Shop for ${esc(n)}" aria-label="Shop for ${esc(n)}">&#128722;</a>`;
 
 const PHASES=[
 {label:'Weeks 1-4',kcal:2200,p:180,c:190,f:70,meals:[
@@ -227,7 +234,7 @@ ${macroBar('Calories',t.k,ph.kcal,'')}${macroBar('Protein',t.p,ph.p,'g')}${macro
 <div class="check"><input type="checkbox" id="ph" ${d.photo?'checked':''}><label style="margin:0;color:var(--text)">Progress photo taken (weekly or bi-weekly, same lighting)</label></div>
 </div>
 <div class="card"><h2>Supplements</h2>
-${SUPPS.map((s,i)=>`<div class="check"><input type="checkbox" data-sp="${i}" ${d.supps[i]?'checked':''}><label style="margin:0;color:var(--text)">${s[0]} <span class="mute">${s[1]}</span></label></div>`).join('')}
+${SUPPS.map((s,i)=>`<div class="check"><input type="checkbox" data-sp="${i}" ${d.supps[i]?'checked':''}><label style="margin:0;color:var(--text)">${s[0]} <span class="mute">${s[1]}</span></label>${shop(s[0])}</div>`).join('')}
 <p class="mute" style="margin-bottom:0">${SUPP_WARN}</p>
 </div>
 <div class="card"><h2>Notes</h2><label>Energy, recovery, sleep</label><textarea id="nt">${esc(d.notes)}</textarea></div>`;
@@ -252,6 +259,42 @@ $('#nt').onchange=e=>{day(cur).notes=e.target.value;save()};
 document.querySelectorAll('[data-sp]').forEach(c=>c.onchange=()=>{day(cur).supps[c.dataset.sp]=c.checked;save()});
 }
 
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const fmtG=g=>g>=1000?+(g/1000).toFixed(2)+' kg':Math.round(g)+' g';
+const fmtOz=o=>{
+if(o>=16){let lb=Math.floor(o/16);let r=Math.round(o-lb*16);if(r===16){lb++;r=0}return lb+' lb'+(r?' '+r+' oz':'')}
+return (+o.toFixed(1))+' oz';
+};
+function shoppingItems(sel,n,days){
+const map={};
+PHASES[sel].meals.slice(0,n).forEach(m=>{
+m[1].split(',').forEach(part=>{
+const t=part.trim();
+let r=t.match(/^(\d+(?:\.\d+)?)\s?(g|ml)\s+(.+)$/);
+let amt,unit,name;
+if(r){amt=+r[1];unit=r[2];name=r[3]}
+else{r=t.match(/^(\d+(?:\.\d+)?)\s+(.+)$/);if(!r)return;amt=+r[1];unit='ct';name=r[2]}
+const key=name.toLowerCase();
+if(!map[key])map[key]={name:key,g:0,ml:0,ct:0};
+map[key][unit]+=amt*days;
+});
+});
+return Object.values(map).sort((a,b)=>a.name<b.name?-1:1);
+}
+function fmtAmt(i){
+const oz=S.settings.units==='oz';
+const p=[];
+if(i.g)p.push(oz?fmtOz(i.g/28.35):fmtG(i.g));
+if(i.ml)p.push(oz?Math.round(i.ml/29.57)+' fl oz':(i.ml>=1000?+(i.ml/1000).toFixed(2)+' L':Math.round(i.ml)+' ml'));
+if(i.ct)p.push(String(i.ct));
+return p.join(' + ');
+}
+function selPhase(){const c=PHASES.indexOf(phaseFor(TODAY));return window._mp===undefined?c:window._mp}
+function shopText(sel){
+const items=shoppingItems(sel,S.settings.meals,7);
+return 'Weekly Shopping List\n'+PHASES[sel].label+' plan, '+S.settings.meals+' meals per day, 7 days\n\n'+items.map(i=>'[ ] '+cap(i.name)+': '+fmtAmt(i)).join('\n')+'\n';
+}
+
 function viewMeals(){
 const ph=phaseFor(TODAY);const w=weekNum(TODAY);
 const cur0=PHASES.indexOf(ph);
@@ -269,6 +312,17 @@ ${w>=1&&w<=16&&sel===cur0?'<p class="mute">This is your current phase.</p>':''}
 <div class="card scroll"><table><tr><th>Meal</th><th>Foods</th><th>Quantity</th><th>Alternatives</th></tr>
 ${P.meals.slice(0,n).map((m,i)=>`<tr><td><b>${i+1}</b></td><td>${m[0]}</td><td>${conv(m[1])}</td><td class="mute">${m[2]}</td></tr>`).join('')}
 </table></div>
+<div class="card"><h2>Weekly Shopping List</h2>
+<p class="mute">Based on ${P.label}, ${n} meals per day, 7 days. Change the phase, meals or units above and the list updates.</p>
+${shoppingItems(sel,n,7).map(i=>`<div class="check sl"><input type="checkbox" id="sl-${i.name.replace(/\W/g,'-')}"><label for="sl-${i.name.replace(/\W/g,'-')}">${esc(cap(i.name))}: <b>${fmtAmt(i)}</b></label></div>`).join('')}
+<div class="row" style="margin-top:14px">
+${navigator.share?'<button class="btn" id="shshare">Share</button>':''}
+<button class="btn alt" id="shcopy">Copy</button>
+<button class="btn alt" id="shmail">Email</button>
+<button class="btn alt" id="shdl">Download .txt</button>
+</div>
+${navigator.share?'<p class="mute" style="margin-bottom:0">Share lets you send it to Signal (Note to Self), Messages, Notes, email and more.</p>':'<p class="mute" style="margin-bottom:0">Copy it and paste into Signal (Note to Self), Notes or a message, or email it to yourself.</p>'}
+</div>
 <div class="card"><h2>Food Choices</h2>
 <h3>Protein</h3><p class="mute">Chicken breast, turkey mince, lean beef (5% fat or less), white fish (cod, tilapia), salmon, whole eggs, egg whites, Greek yogurt (0-2% fat), cottage cheese, tofu, tempeh, seitan, whey or plant protein powder.</p>
 <h3>Carbs</h3><p class="mute">Rolled oats, cream of rice, jasmine or basmati rice, sweet potatoes, white potatoes, quinoa, whole grain pasta, whole grain wraps or pitas, bananas, apples, berries, pears.</p>
@@ -281,6 +335,22 @@ function bindMeals(){
 document.querySelectorAll('#phs button').forEach(b=>b.onclick=()=>{window._mp=+b.dataset.p;render()});
 document.querySelectorAll('#mls button').forEach(b=>b.onclick=()=>{S.settings.meals=+b.dataset.m;save();render()});
 document.querySelectorAll('#uns button').forEach(b=>b.onclick=()=>{S.settings.units=b.dataset.u;save();render()});
+const sel=selPhase();
+const txt=()=>shopText(sel);
+const sh=$('#shshare');
+if(sh)sh.onclick=()=>{navigator.share({title:'Weekly Shopping List',text:txt()}).catch(()=>{})};
+$('#shcopy').onclick=async e=>{
+const b=e.target;
+try{await navigator.clipboard.writeText(txt());b.textContent='Copied';setTimeout(()=>{b.textContent='Copy'},1500)}catch(x){prompt('Copy this list:',txt())}
+};
+$('#shmail').onclick=()=>{location.href='mailto:?subject='+encodeURIComponent('Weekly Shopping List')+'&body='+encodeURIComponent(txt())};
+$('#shdl').onclick=()=>{
+const b=new Blob([txt()],{type:'text/plain'});
+const a=document.createElement('a');
+a.href=URL.createObjectURL(b);
+a.download='shopping-list-'+PHASES[sel].label.toLowerCase().replace(/\s+/g,'-')+'.txt';
+a.click();
+};
 }
 
 function lastLift(name){const a=S.lifts[name];return a&&a.length?a[a.length-1]:null}
@@ -418,7 +488,7 @@ return`
 </div>
 <div class="card"><h2>Supplements</h2>
 <div class="scroll"><table><tr><th>Supplement</th><th>Dosage</th><th>Benefits</th></tr>
-${SUPPS.map(s=>`<tr><td><b>${s[0]}</b></td><td>${s[1]}</td><td class="mute">${s[2]}</td></tr>`).join('')}</table></div>
+${SUPPS.map(s=>`<tr><td><b>${s[0]}</b> ${shop(s[0])}</td><td>${s[1]}</td><td class="mute">${s[2]}</td></tr>`).join('')}</table></div>
 <p class="mute">${SUPP_WARN}</p>
 </div>
 <div class="card"><h2>Track Other Metrics</h2>
