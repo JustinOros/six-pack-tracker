@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>16 Week Six Pack Tracker</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0e0e0e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Six Pack">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <style>
 :root{--bg:#0e0e0e;--card:#181818;--line:#2a2a2a;--text:#f2f2f2;--mute:#9a9a9a;--accent:#f4b928;--good:#4cc16f;--bad:#e5534b}
 *{box-sizing:border-box}
@@ -330,8 +337,8 @@ const SUPPS=[
 ];
 const SUPP_WARN='Supplements are optional. Check with your doctor first, especially if you take medication or have a health condition.';
 
-function defaults(){return{settings:{start:TODAY,weight:'',split:4,meals:3,units:'g',setup:false,trainDays:[],gym:'full',equip:[],level:'new'},days:{},lifts:{}}}
-function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r&&r.settings)return{settings:Object.assign(defaults().settings,r.settings),days:r.days||{},lifts:r.lifts||{}}}catch(e){}return defaults()}
+function defaults(){return{settings:{start:TODAY,weight:'',split:4,meals:3,units:'g',setup:false,trainDays:[],gym:'full',equip:[],level:'new'},days:{},lifts:{},meals:[],checkins:{}}}
+function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r&&r.settings)return{settings:Object.assign(defaults().settings,r.settings),days:r.days||{},lifts:r.lifts||{},meals:r.meals||[],checkins:r.checkins||{}}}catch(e){}return defaults()}
 let S=load();
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 function day(d){if(!S.days[d])S.days[d]={weight:'',steps:'',food:[],supps:{},workout:false,photo:false,notes:'',sleep:'',energy:'',recov:'',alc:'',sug:''};return S.days[d]}
@@ -372,6 +379,21 @@ seen[n.toLowerCase()]=1;out.push(x);
 return out;
 }
 
+function phaseBanner(w){
+if(![5,9,13].includes(w))return '';
+const i=(w-1)/4,a=PHASES[i-1],b=PHASES[i];
+return`<div class="tip"><b>New phase started: ${b.label}.</b> Calories ${a.kcal} to ${b.kcal}, carbs ${a.c}g to ${b.c}g, fat ${a.f}g to ${b.f}g. Protein stays at ${b.p}g. Your Meals tab and shopping list now use the new amounts.</div>`;
+}
+function checkinDue(){
+const w=weekNum(TODAY);
+if(w<1||w>16)return '';
+const days=(pd(TODAY)-pd(S.settings.start))/86400000;
+if(days<6)return '';
+const ks=Object.keys(S.checkins||{}).sort();
+const last=ks.length?ks[ks.length-1]:null;
+if(last&&(pd(TODAY)-pd(last))/86400000<7)return '';
+return`<div class="tip"><b>Weekly check-in is due.</b> Take your progress photo, measure your waist and see how your week went. <button class="btn sm" id="gocheck" style="margin-left:8px">Open</button></div>`;
+}
 function weekNum(d){return Math.floor((pd(d)-pd(S.settings.start))/86400000/7)+1}
 function phaseFor(d){const w=weekNum(d);const i=Math.min(3,Math.max(0,Math.floor((Math.min(16,Math.max(1,w))-1)/4)));return PHASES[i]}
 function conv(s){
@@ -605,10 +627,14 @@ RF=recentFoods();
 const wo=workoutOn(cur);let nx=null;
 if(!wo){for(let k=1;k<=7&&!nx;k++){const x=workoutOn(addDays(cur,k));if(x)nx={x,k}}}
 TI=wo?wo.i:(nx?nx.x.i:0);
-const backupDue=Object.keys(S.days).length>=3&&(!S.settings.lastBackup||(pd(TODAY)-pd(S.settings.lastBackup))/86400000>14);
+const backupDue=Object.keys(S.days).length>=3&&(!S.settings.lastBackup||(pd(TODAY)-pd(S.settings.lastBackup))/86400000>7);
 const wl=w<1?'Starts in '+(1-w)+' wk':w>16?'Blueprint complete':'Week '+w+' of 16';
 const stepPct=Math.min(100,(Number(d.steps)||0)/10000*100);
+const SM=S.meals||[];
+const yd=S.days[addDays(cur,-1)];
+const canCopy=!d.food.length&&yd&&yd.food.length;
 return`
+${cur===TODAY?phaseBanner(w)+checkinDue():''}
 <div class="card">
 <div class="row"><button class="btn alt sm" id="prev">&lt;</button><input type="date" id="dt" value="${cur}" class="grow"><button class="btn alt sm" id="next">&gt;</button><button class="btn sm" id="tod">Today</button></div>
 <p style="margin:10px 0 0"><span class="pill y">${wl}</span><span class="pill">${ph.label} targets</span></p>
@@ -636,8 +662,11 @@ ${macroBar('Calories',t.k,ph.kcal,'')}${macroBar('Protein',t.p,ph.p,'g')}${macro
 <div id="fest" class="mute" style="margin-top:8px"></div>
 <div id="fsug" class="seg" style="margin:8px 0 0"></div>
 <p class="mute" style="margin:8px 0 0;font-size:12px">Type what you ate, like "2 eggs", "1 cup rice" or "200g chicken breast". The numbers fill in automatically and you can edit any of them. Meat and fish count as raw unless you type "cooked" or "grilled".</p>
+${canCopy?'<div style="margin-top:10px"><button class="btn alt" id="cpy">Copy yesterday\'s food ('+yd.food.length+' items)</button></div>':''}
+${SM.length?`<p class="mute" style="margin:10px 0 4px">Saved meals:</p><div class="seg" style="margin-bottom:0">${SM.map((m,i)=>`<span style="display:inline-flex;gap:4px"><button data-sm="${i}" style="flex:none">+ ${esc(m.n)} (${Math.round(m.items.reduce((a,x)=>a+x.k,0))} kcal)</button><button class="btn danger sm" data-smd="${i}" aria-label="Delete saved meal ${esc(m.n)}">x</button></span>`).join('')}</div>`:''}
 ${RF.length?`<p class="mute" style="margin:10px 0 4px">Tap to add again:</p><div class="seg" style="margin-bottom:0">${RF.map((x,i)=>`<button data-rf="${i}" style="flex:none">${esc(x.n)}</button>`).join('')}</div>`:''}
-<div style="margin-top:10px">${d.food.length?d.food.map((x,i)=>`<div class="food"><span>${esc(x.n||'Food')}<br><span class="mute">${Math.round(x.k)} kcal | P ${Math.round(x.p)} | C ${Math.round(x.c)} | F ${Math.round(x.f)}</span></span><button class="btn danger sm" data-del="${i}">Remove</button></div>`).join(''):'<p class="mute">Nothing logged yet.</p>'}</div>
+<div style="margin-top:10px">${d.food.length?d.food.map((x,i)=>`<div class="food"><input type="checkbox" data-sel="${i}" aria-label="Select ${esc(x.n||'Food')}" style="width:auto;margin-right:8px"><span style="flex:1">${esc(x.n||'Food')}<br><span class="mute">${Math.round(x.k)} kcal | P ${Math.round(x.p)} | C ${Math.round(x.c)} | F ${Math.round(x.f)}</span></span><button class="btn danger sm" data-del="${i}">Remove</button></div>`).join(''):'<p class="mute">Nothing logged yet.</p>'}</div>
+${d.food.length?'<div class="row" style="margin-top:10px"><div class="grow" style="flex:2;min-width:160px"><label>Save as a meal (tick items above, or leave blank to save all)</label><input id="mn" placeholder="e.g. Breakfast"></div><button class="btn alt" id="msave">Save meal</button></div>':''}
 </div>
 <div class="card"><h2>Daily Check-in</h2>
 <div class="row"><div class="grow"><label>Morning weight (lb, fasted)</label><input id="wt" type="number" inputmode="decimal" step="0.1" value="${esc(d.weight)}"></div>
@@ -702,6 +731,19 @@ $('#fn').focus();
 $('#fn').oninput=upd;
 document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{day(cur).food.splice(+b.dataset.del,1);save();render()});
 document.querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>{const x=RF[+b.dataset.rf];day(cur).food.push({n:x.n,k:x.k,p:x.p,c:x.c,f:x.f});save();render()});
+if($('#cpy'))$('#cpy').onclick=()=>{S.days[addDays(cur,-1)].food.forEach(x=>day(cur).food.push({n:x.n,k:x.k,p:x.p,c:x.c,f:x.f}));save();render()};
+document.querySelectorAll('[data-sm]').forEach(b=>b.onclick=()=>{S.meals[+b.dataset.sm].items.forEach(x=>day(cur).food.push({n:x.n,k:x.k,p:x.p,c:x.c,f:x.f}));save();render()});
+document.querySelectorAll('[data-smd]').forEach(b=>b.onclick=()=>{S.meals.splice(+b.dataset.smd,1);save();render()});
+if($('#msave'))$('#msave').onclick=()=>{
+const nm=($('#mn').value||'').trim()||'My meal';
+const sel=[...document.querySelectorAll('[data-sel]')].filter(c=>c.checked).map(c=>+c.dataset.sel);
+const all=day(cur).food;
+const items=(sel.length?sel.map(i=>all[i]):all).map(x=>({n:x.n,k:x.k,p:x.p,c:x.c,f:x.f}));
+if(!items.length)return;
+S.meals=(S.meals||[]).filter(m=>m.n.toLowerCase()!==nm.toLowerCase());
+S.meals.push({n:nm,items});save();render();
+};
+if($('#gocheck'))$('#gocheck').onclick=()=>{tab='progress';render();window.scrollTo(0,0)};
 $('#gotrain').onclick=()=>{trainDay=TI;tab='train';render();window.scrollTo(0,0)};
 $('#gomeals').onclick=()=>{window._mp=undefined;tab='meals';render();window.scrollTo(0,0)};
 $('#wt').onchange=e=>{day(cur).weight=e.target.value;save()};
@@ -775,6 +817,20 @@ ${P.plans[n].rows.map((m,i)=>`<tr><td><b>${i+1}</b></td><td>${m[0]}</td><td>${co
 </table>
 <p class="mute" style="margin:10px 0 0"><b>Plan total:</b> ${P.plans[n].tot[0]} kcal | ${P.plans[n].tot[1]}g protein | ${P.plans[n].tot[2]}g carbs | ${P.plans[n].tot[3]}g fat. These amounts are calculated to match your daily targets.</p>
 <p class="mute" style="margin:6px 0 0">Weigh meat, fish, oats, sweet potato and eggs raw or dry. Weigh rice and quinoa cooked. Nutrition values are estimates, so adjust using your food log.</p></div>
+<div class="card"><h2>Meal Prep Guide</h2>
+<details><summary>How to prep a week of meals</summary>
+<p class="mute"><b>Cook twice a week.</b> Sunday for Monday to Wednesday and Wednesday for Thursday to Sunday keeps food fresh and tasty.</p>
+<ol class="steps">
+<li>Weigh meat, fish, oats and sweet potato raw or dry, then cook them. Weigh rice and quinoa after cooking. This matches the amounts in the plan.</li>
+<li>Cook the proteins first (chicken, fish, beef). Bake sweet potatoes and cook rice or quinoa while they go.</li>
+<li>Divide each meal into its own container using the quantities in the Meals table above. Label them Meal 1, Meal 2 and so on.</li>
+<li>Add vegetables to each container, or keep them separate if you like them crisp.</li>
+<li>Cool rice and cooked food within an hour, then refrigerate.</li>
+</ol>
+<p class="mute"><b>Cooking changes weight.</b> Chicken breast and lean beef lose about 25% when cooked, and fish about 20%. So 8 oz of raw chicken becomes about 6 oz cooked. Rice and quinoa gain weight from water, which is why they are weighed cooked. If you weigh meat after cooking, multiply the cooked weight by 1.33 to get the raw amount.</p>
+<p class="mute"><b>Storage.</b> Cooked meat, fish and rice keep 3 to 4 days in the fridge in airtight containers. Freeze anything you will not eat in that time, for up to 3 months, and thaw in the fridge overnight. Reheat to 165 F.</p>
+<p class="mute"><b>Save time.</b> Cook double batches of rice and protein, use frozen vegetables, and buy pre-washed spinach. Season with salt, pepper, garlic powder, paprika and hot sauce so meals do not get boring.</p>
+</details></div>
 <div class="card"><h2>Weekly Shopping List</h2>
 <p class="mute">Based on ${P.label}, ${n} meals per day, 7 days. Change the phase, meals or units above and the list updates.</p>
 ${shoppingItems(sel,n,7).map(i=>`<div class="check sl"><input type="checkbox" id="sl-${i.name.replace(/\W/g,'-')}"><label for="sl-${i.name.replace(/\W/g,'-')}">${esc(cap(i.name))}: <b>${fmtAmt(i)}</b></label></div>`).join('')}
@@ -876,6 +932,11 @@ if(trainDay===null)trainDay=nextWorkoutIdx();
 if(trainDay>=sp.length)trainDay=0;
 const dd=sp[trainDay];
 return`
+<div class="card"><h2>Rest Timer</h2>
+<div class="seg" id="rt">${[60,90,120,180].map(s=>`<button data-r="${s}">${s>=120?s/60+' min':s+' sec'}</button>`).join('')}</div>
+<div id="rtd" style="font-size:2rem;font-weight:700">0:00</div>
+<p class="mute" style="margin:4px 0 0">Tap a time after each set. About 2-3 minutes for heavy sets, 1-2 minutes for lighter ones. It beeps and vibrates when time is up.</p>
+</div>
 <div class="card"><h2>${S.settings.split} Day Training</h2>
 <div class="seg" id="spl">${[3,4,5].map(n=>`<button data-s="${n}" class="${n===S.settings.split?'on':''}">${n} days</button>`).join('')}</div>
 <div class="seg" id="tdy">${sp.map((x,i)=>`<button data-d="${i}" class="${i===trainDay?'on':''}">Day ${i+1}</button>`).join('')}</div>
@@ -919,7 +980,20 @@ return`<tr><td><b>${n}</b> <a class="vid" href="https://www.youtube.com/results?
 </div>
 ${gearGuide()}`;
 }
+let rtEnd=0,rtInt=null;
+function rtTick(){
+const el=$('#rtd');
+const left=Math.max(0,Math.ceil((rtEnd-Date.now())/1000));
+if(el)el.textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');
+if(left<=0&&rtInt){
+clearInterval(rtInt);rtInt=null;
+try{const A=window.AudioContext||window.webkitAudioContext;const c=new A();[0,0.35,0.7].forEach(t=>{const o=c.createOscillator(),g=c.createGain();o.frequency.value=880;g.gain.value=0.2;o.connect(g);g.connect(c.destination);o.start(c.currentTime+t);o.stop(c.currentTime+t+0.2)})}catch(e){}
+try{navigator.vibrate&&navigator.vibrate([300,150,300])}catch(e){}
+}
+}
 function bindTrain(){
+document.querySelectorAll('#rt button').forEach(b=>b.onclick=()=>{rtEnd=Date.now()+(+b.dataset.r)*1000;if(rtInt)clearInterval(rtInt);rtInt=setInterval(rtTick,250);rtTick()});
+if(rtEnd>Date.now()){if(!rtInt)rtInt=setInterval(rtTick,250);rtTick()}
 if($('#glv'))$('#glv').onchange=e=>{S.settings.level=e.target.value;save();render()};
 document.querySelectorAll('#spl button').forEach(b=>b.onclick=()=>{S.settings.split=+b.dataset.s;S.settings.trainDays=[];trainDay=0;save();render()});
 document.querySelectorAll('#tdy button').forEach(b=>b.onclick=()=>{trainDay=+b.dataset.d;render()});
@@ -955,6 +1029,56 @@ const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
 const f=a=>a.length?avg(a).toFixed(1):'-';
 return{sl:f(sl),en:f(en),rc:f(rc),al,sg,low:sl.length>=3&&avg(sl)<7};
 }
+function winStats(from,to){
+const wts=[],kc=[],st=[],sl=[];let wo=0,sched=0,logged=0;
+for(let d=from;d<=to;d=addDays(d,1)){
+const x=S.days[d];
+if(workoutOn(d))sched++;
+if(!x)continue;
+const w=parseFloat(x.weight);if(!isNaN(w))wts.push(w);
+if(x.food.length){kc.push(totals(d).k);logged++}
+const s=parseFloat(x.steps);if(!isNaN(s))st.push(s);
+const z=parseFloat(x.sleep);if(!isNaN(z))sl.push(z);
+if(x.workout)wo++;
+}
+const avg=a=>a.length?a.reduce((p,q)=>p+q,0)/a.length:null;
+return{w:avg(wts),wn:wts.length,k:avg(kc),st:avg(st),sl:avg(sl),wo,sched,logged};
+}
+function weeklyVerdict(a,b){
+if(a.wn<3)return'Weigh yourself on at least 3 mornings this week so the average means something.';
+if(b.wn<3)return'Not enough weigh-ins last week to compare yet. Keep logging and next week you will get a full read.';
+const pct=(a.w-b.w)/b.w*100,lb=a.w-b.w;
+const s=(lb>0?'+':'')+lb.toFixed(1)+' lb ('+(pct>0?'+':'')+pct.toFixed(1)+'%)';
+if(pct<-1.2)return'Down '+s.replace('-','')+'. That is faster than ideal and can cost muscle. Add about 100-150 calories, mostly from carbs, and keep protein at target.';
+if(pct<=-0.3)return'Down '+s.replace('-','')+'. This is right on track. Keep everything the same.';
+if(pct<=0.3)return'Flat ('+s+'). One flat week is normal from water, salt and sleep. If next week is flat too, tighten portion weighing and logging, add 2,000 steps a day, and only then cut about 100 calories from carbs.';
+return'Up '+s+'. Check weekend eating, alcohol and salty meals. If your average is up two weeks in a row, cut about 100-150 calories from carbs.';
+}
+function checkinCard(){
+const w=weekNum(TODAY);
+if(w<1)return '';
+const a=winStats(addDays(TODAY,-6),TODAY),b=winStats(addDays(TODAY,-13),addDays(TODAY,-7));
+const ph=phaseFor(TODAY);
+const ks=Object.keys(S.checkins||{}).sort();
+const todays=(S.checkins||{})[TODAY]||{};
+const fmt=v=>v===null?'-':Math.round(v).toLocaleString();
+return`<div class="card"><h2>Weekly Check-in</h2>
+<div class="tip"><b>${esc(weeklyVerdict(a,b))}</b></div>
+<div class="stats">
+<div class="stat"><b>${a.w===null?'-':a.w.toFixed(1)}</b><span>Avg weight (lb)</span></div>
+<div class="stat"><b>${fmt(a.k)}</b><span>Avg calories (goal ${ph.kcal})</span></div>
+<div class="stat"><b>${a.wo}/${a.sched}</b><span>Workouts done</span></div>
+<div class="stat"><b>${fmt(a.st)}</b><span>Avg steps</span></div>
+<div class="stat"><b>${a.sl===null?'-':a.sl.toFixed(1)}</b><span>Avg sleep (hours)</span></div>
+<div class="stat"><b>${a.logged}/7</b><span>Days food logged</span></div>
+</div>
+<p class="mute">Take a progress photo in the same spot and lighting, then measure your waist at the belly button, relaxed, after breathing out.</p>
+<div class="row"><div class="grow"><label>Waist (inches)</label><input id="cw" type="number" inputmode="decimal" step="0.1" value="${esc(todays.waist||'')}"></div>
+<div class="grow" style="flex:2;min-width:160px"><label>Note (optional)</label><input id="cn" value="${esc(todays.note||'')}"></div>
+<button class="btn" id="cs">${todays.date?'Update check-in':'Save check-in'}</button></div>
+${ks.length?`<div class="scroll" style="margin-top:10px"><table><tr><th>Date</th><th>Avg weight</th><th>Waist</th><th>Waist change</th></tr>${ks.map((k,i)=>{const c=S.checkins[k],p=i?S.checkins[ks[i-1]]:null;const wc=p&&c.waist&&p.waist?(c.waist-p.waist):null;return`<tr><td>${k}</td><td>${c.w?c.w.toFixed(1):'-'}</td><td>${c.waist?c.waist:'-'}</td><td>${wc===null?'-':(wc>0?'+':'')+wc.toFixed(1)}</td></tr>`}).join('')}</table></div>`:''}
+</div>`;
+}
 function viewProgress(){
 const arr=weights(),rows=weeklyRows(arr),R7=recent7();
 const first=arr[0],last=arr[arr.length-1];
@@ -973,6 +1097,7 @@ return`
 <div class="stat"><b>${logged}</b><span>Days logged</span></div>
 <div class="stat"><b>${workouts}</b><span>Workouts done</span></div>
 </div>${tip}</div>
+${checkinCard()}
 <div class="card"><h2>Last 7 Days: Sleep and Habits</h2>
 <div class="stats">
 <div class="stat"><b>${R7.sl}</b><span>Avg sleep (hours)</span></div>
@@ -1019,13 +1144,20 @@ arr.forEach((x,i)=>{const px=X(x.d),py=Y(avg[i]);i?g.lineTo(px,py):g.moveTo(px,p
 }
 function bindProgress(){
 drawChart();
+if($('#cs'))$('#cs').onclick=()=>{
+const a=winStats(addDays(TODAY,-6),TODAY);
+const wv=parseFloat($('#cw').value);
+S.checkins=S.checkins||{};
+S.checkins[TODAY]={date:TODAY,waist:isNaN(wv)?'':wv,note:$('#cn').value.trim(),w:a.w};
+save();render();
+};
 const ex=$('#exp');if(!ex)return;
 ex.onclick=()=>{S.settings.lastBackup=TODAY;save();const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='six-pack-tracker-'+TODAY+'.json';a.click()};
 $('#imp').onclick=()=>$('#file').click();
 $('#file').onchange=e=>{
 const f=e.target.files[0];if(!f)return;
 const r=new FileReader();
-r.onload=()=>{try{const o=JSON.parse(r.result);if(!o.settings||!o.days)throw 0;S={settings:Object.assign(defaults().settings,o.settings),days:o.days,lifts:o.lifts||{}};save();render()}catch(x){alert('That file is not a valid backup.')}};
+r.onload=()=>{try{const o=JSON.parse(r.result);if(!o.settings||!o.days)throw 0;S={settings:Object.assign(defaults().settings,o.settings),days:o.days,lifts:o.lifts||{},meals:o.meals||[],checkins:o.checkins||{}};save();render()}catch(x){alert('That file is not a valid backup.')}};
 r.readAsText(f);
 };
 $('#rst').onclick=()=>{if(confirm('Erase all saved data in this browser?')){S=defaults();save();tab='setup';render()}};
@@ -1268,6 +1400,7 @@ const v=VIEWS[tab];
 $('#view').innerHTML=v[0]();
 v[1]();
 }
+if(typeof navigator!=='undefined'&&navigator.serviceWorker&&typeof location!=='undefined'&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
 window.addEventListener('resize',()=>{if(tab==='progress')drawChart()});
 render();
 </script>
