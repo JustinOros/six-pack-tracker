@@ -62,6 +62,11 @@ canvas{width:100%;height:240px;display:block}
 .sl label{color:var(--text);font-size:15px;margin:0;flex:1;cursor:pointer}
 .sl input:checked+label{text-decoration:line-through;color:var(--mute)}
 .sl input:checked+label b{color:var(--mute)}
+details{margin:10px 0}
+details summary{cursor:pointer;color:var(--accent);font-weight:600}
+details[open] summary{margin-bottom:8px}
+ol.steps{padding-left:20px;margin:0}
+ol.steps li{margin-bottom:8px;font-size:14px;color:var(--mute)}
 .last{font-size:12px;color:var(--mute);margin-top:3px}
 footer{max-width:900px;margin:0 auto;padding:0 16px 40px;color:var(--mute);font-size:12px}
 </style>
@@ -181,8 +186,19 @@ function day(d){if(!S.days[d])S.days[d]={weight:'',steps:'',food:[],supps:{},wor
 
 let tab=S.settings.setup?'today':'setup';
 let cur=TODAY;
-let trainDay=0;
+let trainDay=null;
 const TABS=[['today','Today'],['meals','Meals'],['train','Training'],['progress','Progress'],['guide','Guide'],['setup','Setup']];
+function nextWorkoutIdx(){const n=SPLITS[S.settings.split].length;return Object.keys(S.days).filter(k=>S.days[k].workout).length%n}
+let RF=[];
+function recentFoods(){
+const seen={},out=[];
+Object.keys(S.days).sort().reverse().forEach(k=>{S.days[k].food.slice().reverse().forEach(x=>{
+const n=(x.n||'').trim();
+if(!n||seen[n.toLowerCase()]||out.length>=8)return;
+seen[n.toLowerCase()]=1;out.push(x);
+})});
+return out;
+}
 
 function weekNum(d){return Math.floor((pd(d)-pd(S.settings.start))/86400000/7)+1}
 function phaseFor(d){const w=weekNum(d);const i=Math.min(3,Math.max(0,Math.floor((Math.min(16,Math.max(1,w))-1)/4)));return PHASES[i]}
@@ -207,6 +223,9 @@ function totals(d){const f=day(d).food;return f.reduce((a,x)=>({k:a.k+x.k,p:a.p+
 
 function viewToday(){
 const d=day(cur),ph=phaseFor(cur),w=weekNum(cur),t=totals(cur);
+RF=recentFoods();
+const sp=SPLITS[S.settings.split],ni=nextWorkoutIdx();
+const backupDue=Object.keys(S.days).length>=3&&(!S.settings.lastBackup||(pd(TODAY)-pd(S.settings.lastBackup))/86400000>14);
 const wl=w<1?'Starts in '+(1-w)+' wk':w>16?'Blueprint complete':'Week '+w+' of 16';
 const stepPct=Math.min(100,(Number(d.steps)||0)/10000*100);
 return`
@@ -214,16 +233,25 @@ return`
 <div class="row"><button class="btn alt sm" id="prev">&lt;</button><input type="date" id="dt" value="${cur}" class="grow"><button class="btn alt sm" id="next">&gt;</button><button class="btn sm" id="tod">Today</button></div>
 <p style="margin:10px 0 0"><span class="pill y">${wl}</span><span class="pill">${ph.label} targets</span></p>
 </div>
+<div class="card"><h2>Your Plan Today</h2>
+<div class="check"><div class="grow"><b>Workout:</b> ${d.workout?'Done today. Next up: ':''}${esc(sp[ni][0])}</div><button class="btn sm" id="gotrain">Open</button></div>
+<div class="check"><div class="grow"><b>Food:</b> ${ph.kcal} kcal, ${ph.p}g protein, ${ph.c}g carbs, ${ph.f}g fat</div><button class="btn alt sm" id="gomeals">Meals</button></div>
+<div class="check"><div class="grow"><b>Steps:</b> 10,000</div></div>
+<div class="check"><div class="grow"><b>Sleep:</b> 7-9 hours</div></div>
+<details><summary>Show today's meals</summary>${ph.meals.slice(0,S.settings.meals).map((m,i)=>`<p class="mute" style="margin:6px 0"><b>${i+1}.</b> ${m[0]}<br>${conv(m[1])}</p>`).join('')}</details>
+${backupDue?'<div class="tip"><b>Back up your data.</b> It is saved only in this browser. Go to Progress and tap Export backup.</div>':''}
+</div>
 <div class="card"><h2>Daily Targets</h2>
 ${macroBar('Calories',t.k,ph.kcal,'')}${macroBar('Protein',t.p,ph.p,'g')}${macroBar('Carbs',t.c,ph.c,'g')}${macroBar('Fat',t.f,ph.f,'g')}
 </div>
 <div class="card"><h2>Log Food</h2>
 <div class="row"><div class="grow" style="flex:2;min-width:160px"><label>Food</label><input id="fn" placeholder="e.g. Chicken and rice"></div>
-<div class="grow"><label>Calories</label><input id="fk" type="number" inputmode="decimal" min="0"></div>
+<div class="grow"><label>Calories (auto if blank)</label><input id="fk" type="number" inputmode="decimal" min="0"></div>
 <div class="grow"><label>Protein g</label><input id="fp" type="number" inputmode="decimal" min="0"></div>
 <div class="grow"><label>Carbs g</label><input id="fc" type="number" inputmode="decimal" min="0"></div>
 <div class="grow"><label>Fat g</label><input id="ff" type="number" inputmode="decimal" min="0"></div>
 <button class="btn" id="fadd">Add</button></div>
+${RF.length?`<p class="mute" style="margin:10px 0 4px">Tap to add again:</p><div class="seg" style="margin-bottom:0">${RF.map((x,i)=>`<button data-rf="${i}" style="flex:none">${esc(x.n)}</button>`).join('')}</div>`:''}
 <div style="margin-top:10px">${d.food.length?d.food.map((x,i)=>`<div class="food"><span>${esc(x.n||'Food')}<br><span class="mute">${Math.round(x.k)} kcal | P ${Math.round(x.p)} | C ${Math.round(x.c)} | F ${Math.round(x.f)}</span></span><button class="btn danger sm" data-del="${i}">Remove</button></div>`).join(''):'<p class="mute">Nothing logged yet.</p>'}</div>
 </div>
 <div class="card"><h2>Daily Check-in</h2>
@@ -262,6 +290,9 @@ if(!n&&!k&&!p&&!c&&!f)return;
 day(cur).food.push({n,k:k||(p*4+c*4+f*9),p,c,f});save();render();
 };
 document.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{day(cur).food.splice(+b.dataset.del,1);save();render()});
+document.querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>{const x=RF[+b.dataset.rf];day(cur).food.push({n:x.n,k:x.k,p:x.p,c:x.c,f:x.f});save();render()});
+$('#gotrain').onclick=()=>{trainDay=null;tab='train';render();window.scrollTo(0,0)};
+$('#gomeals').onclick=()=>{window._mp=undefined;tab='meals';render();window.scrollTo(0,0)};
 $('#wt').onchange=e=>{day(cur).weight=e.target.value;save()};
 $('#st').onchange=e=>{day(cur).steps=e.target.value;save();render()};
 $('#wk').onchange=e=>{day(cur).workout=e.target.checked;save()};
@@ -379,13 +410,33 @@ a.click();
 function lastLift(name){const a=S.lifts[name];return a&&a.length?a[a.length-1]:null}
 function viewTrain(){
 const sp=SPLITS[S.settings.split];
+if(trainDay===null)trainDay=nextWorkoutIdx();
 if(trainDay>=sp.length)trainDay=0;
 const dd=sp[trainDay];
 return`
 <div class="card"><h2>${S.settings.split} Day Training</h2>
 <div class="seg" id="spl">${[3,4,5].map(n=>`<button data-s="${n}" class="${n===S.settings.split?'on':''}">${n} days</button>`).join('')}</div>
 <div class="seg" id="tdy">${sp.map((x,i)=>`<button data-d="${i}" class="${i===trainDay?'on':''}">Day ${i+1}</button>`).join('')}</div>
-<p class="mute" style="margin:0">Log your best set as weight x reps (example: 42.5 x 7). Entries save under today's date and the last entry is shown under each box.</p>
+<p class="mute" style="margin:0">Log your best set as weight x reps (example: 85 x 7). Entries save under today's date and the last entry is shown under each box. The workout shown first is the next one in your rotation.</p>
+<details><summary>New to lifting? Read this first</summary>
+<p class="mute"><b>Sets and reps:</b> a rep is one full lift and lower. A set is a group of reps done without resting. The number under Sets is how many working sets to do.</p>
+<p class="mute"><b>"6-8 / 10-12":</b> on your first set use a heavier weight and stop at 6-8 reps (the top set). On your second set lower the weight a little and do 10-12 reps (the back-off set). If only one rep range is shown, use it for every set. Where Sets says 1, do one hard set.</p>
+<p class="mute"><b>"2/leg" and "12-15 steps":</b> 2 sets on each leg, and 12-15 steps per leg for lunges.</p>
+<p class="mute"><b>How hard:</b> pick a weight where the last 1-2 reps of each set are tough but your form stays clean. Stop the set if your form breaks down.</p>
+<p class="mute"><b>Warm up (general guidance):</b> 5 minutes of easy cardio, then 1-2 light practice sets of your first exercise before your working sets.</p>
+<p class="mute"><b>Rest (general guidance):</b> about 2-3 minutes between heavy sets and 1-2 minutes between lighter ones.</p>
+<p class="mute"><b>First week:</b> start lighter than you think and learn the movements. Tap the red play button next to an exercise to watch a how-to video. If you can, ask a trainer to check your squat and deadlift form.</p>
+</details>
+<details><summary>Gym terms</summary>
+<p class="mute"><b>ROM:</b> range of motion. "Full ROM" means moving through the whole movement.</p>
+<p class="mute"><b>Eccentric:</b> the lowering part of a lift. "Control the eccentric" means lower slowly.</p>
+<p class="mute"><b>Top set / back-off set:</b> your heavy first set / your lighter second set.</p>
+<p class="mute"><b>DB / BB:</b> dumbbell / barbell. <b>EZ bar:</b> a curved barbell that is easier on the wrists.</p>
+<p class="mute"><b>Smith machine:</b> a barbell fixed on vertical rails.</p>
+<p class="mute"><b>Cable:</b> a weight stack machine with a handle on a cable.</p>
+<p class="mute"><b>Romanian deadlift:</b> a hip hinge with a slight knee bend, lowering the weight down your legs to stretch the hamstrings.</p>
+<p class="mute"><b>PPLUL (5 day plan):</b> Push, Pull, Legs, Upper, Legs.</p>
+</details>
 </div>
 <div class="card"><h2>${esc(dd[0])}</h2>
 <div class="scroll"><table><tr><th>Exercise</th><th>Sets</th><th>Reps</th><th>Today's log</th></tr>
@@ -504,7 +555,7 @@ arr.forEach((x,i)=>{const px=X(x.d),py=Y(avg[i]);i?g.lineTo(px,py):g.moveTo(px,p
 function bindProgress(){
 drawChart();
 const ex=$('#exp');if(!ex)return;
-ex.onclick=()=>{const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='six-pack-tracker-'+TODAY+'.json';a.click()};
+ex.onclick=()=>{S.settings.lastBackup=TODAY;save();const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='six-pack-tracker-'+TODAY+'.json';a.click()};
 $('#imp').onclick=()=>$('#file').click();
 $('#file').onchange=e=>{
 const f=e.target.files[0];if(!f)return;
@@ -555,6 +606,10 @@ ${SUPPS.map(s=>`<tr><td><b>${s[0]}</b> ${shop(s[0])}</td><td>${s[1]}</td><td cla
 <p class="mute"><b>Alcohol:</b> the best choice for the 16 weeks is none. It adds calories (a beer is roughly 150 calories, and many cocktails are more), disrupts sleep, slows recovery and makes it easier to overeat. If you do drink, keep it occasional, 1-2 drinks, and log the calories in the food log.</p>
 <p class="mute">General fitness guidance, not medical advice. Talk to your doctor if you have a health condition or take medication.</p>
 </div>
+<div class="card"><h2>Cardio</h2>
+<p class="mute">The blueprint says to add cardio when weight stalls, but the PDF did not include a cardio schedule. This is general guidance.</p>
+<p class="mute">Do not add cardio at the start. If your weekly average weight has stalled for 7+ days while you follow the plan, either cut 100-200 calories per day or add cardio. To add cardio, start with 2 sessions a week of 20-30 minutes at an easy pace (brisk incline walk or bike). Add a session or 10 minutes every 1-2 weeks if needed. Keep it easy enough that it does not hurt your lifting.</p>
+</div>
 <div class="card"><h2>Track Other Metrics</h2>
 <div class="scroll"><table><tr><th>Metric</th><th>How to track</th></tr>
 <tr><td>Bodyweight</td><td>Weigh daily, fasted, first thing in the morning, and track the weekly average</td></tr>
@@ -591,11 +646,22 @@ return`
 <div class="grow"><label>Training days per week</label><select id="sp">${[3,4,5].map(n=>`<option value="${n}" ${n===s.split?'selected':''}>${n} days</option>`).join('')}</select></div>
 <div class="grow"><label>Meals per day</label><select id="sm">${[3,4,5].map(n=>`<option value="${n}" ${n===s.meals?'selected':''}>${n} meals</option>`).join('')}</select></div>
 <div class="grow"><label>Food units</label><select id="su"><option value="g" ${s.units==='g'?'selected':''}>Grams</option><option value="oz" ${s.units==='oz'?'selected':''}>Ounces</option></select></div></div>
+<p class="mute">Not sure? Start with 3 training days and 3 meals per day. You can change these any time.</p>
 <div id="calc">${calcHtml(parseFloat(s.weight))}</div>
 <div style="margin-top:14px"><button class="btn" id="sv">Save and start</button></div>
 </div>
 <div class="card"><h2>How it works</h2>
-<p class="mute">16 weeks in four phases, each with lower calories and carbs and a constant 180 g of protein. Use the Today tab every day to log food, weight, steps, supplements and your workout. Your data never leaves this browser.</p>
+<p class="mute">16 weeks in four phases of 4 weeks. Each phase lowers calories and carbs while protein stays at 180 g. Your data never leaves this browser.</p>
+<ol class="steps">
+<li>Fill in the Setup above and tap Save and start.</li>
+<li>Open Meals, pick your meals per day, and use the Weekly Shopping List to shop.</li>
+<li>Each morning, weigh yourself after using the bathroom and before eating or drinking, then enter it on Today.</li>
+<li>Eat the meals in your plan and log your food on Today. The bars show how close you are to your targets.</li>
+<li>On training days, open Training, do the workout and log your lifts. Then tick Workout completed on Today.</li>
+<li>Walk 10,000 steps a day and aim for 7-9 hours of sleep.</li>
+<li>Check Progress each week. Every 4 weeks, review your weight trend and move to the next phase.</li>
+<li>Export a backup now and then (Progress tab), because your data is saved only in this browser.</li>
+</ol>
 </div>`;
 }
 function bindSetup(){
