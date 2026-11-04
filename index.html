@@ -265,21 +265,28 @@ const fmtOz=o=>{
 if(o>=16){let lb=Math.floor(o/16);let r=Math.round(o-lb*16);if(r===16){lb++;r=0}return lb+' lb'+(r?' '+r+' oz':'')}
 return (+o.toFixed(1))+' oz';
 };
+const FIX={
+'0:0:oats':'rolled oats','0:0:berries':'blueberries (fresh or frozen)','0:1:chicken':'chicken breast','0:1:greens':'salad greens (mixed lettuce, spinach)','0:1:oil':'olive oil','0:3:whey':'whey protein','0:3:banana':'bananas','0:4:yogurt':'Greek yogurt','0:4:nuts':'mixed nuts',
+'1:0:oats':'rolled oats','1:0:berries':'blueberries (fresh or frozen)','1:1:turkey':'turkey mince','1:1:greens':'salad greens (mixed lettuce, spinach)','1:1:oil':'olive oil','1:3:whey':'whey protein','1:3:banana':'bananas','1:4:yogurt':'Greek yogurt',
+'2:0:whites':'egg whites','2:0:oats':'rolled oats','2:0:berries':'strawberries (fresh or frozen)','2:1:turkey':'turkey breast','2:1:greens':'spinach','2:1:oil':'olive oil','2:2:fish':'white fish','2:2:rice':'rice (jasmine or basmati)','2:2:beans':'green beans','2:3:whey':'whey protein','2:3:berries':'berries (fresh or frozen)','2:4:yogurt':'Greek yogurt','2:4:nuts':'walnuts',
+'3:0:greens':'spinach or kale','3:0:seeds':'chia seeds','3:1:chicken':'chicken breast','3:1:oil':'olive oil','3:2:fish':'white fish','3:2:cauli rice':'cauliflower rice','3:3:whey':'whey protein isolate','3:4:yogurt':'low-fat Greek yogurt'
+};
 function shoppingItems(sel,n,days){
 const map={};
-PHASES[sel].meals.slice(0,n).forEach(m=>{
+PHASES[sel].meals.slice(0,n).forEach((m,mi)=>{
 m[1].split(',').forEach(part=>{
 const t=part.trim();
 let r=t.match(/^(\d+(?:\.\d+)?)\s?(g|ml)\s+(.+)$/);
 let amt,unit,name;
 if(r){amt=+r[1];unit=r[2];name=r[3]}
 else{r=t.match(/^(\d+(?:\.\d+)?)\s+(.+)$/);if(!r)return;amt=+r[1];unit='ct';name=r[2]}
-const key=name.toLowerCase();
-if(!map[key])map[key]={name:key,g:0,ml:0,ct:0};
+const disp=FIX[sel+':'+mi+':'+name.toLowerCase()]||name;
+const key=disp.toLowerCase();
+if(!map[key])map[key]={name:disp,g:0,ml:0,ct:0};
 map[key][unit]+=amt*days;
 });
 });
-return Object.values(map).sort((a,b)=>a.name<b.name?-1:1);
+return Object.values(map).sort((a,b)=>a.name.toLowerCase()<b.name.toLowerCase()?-1:1);
 }
 function fmtAmt(i){
 const oz=S.settings.units==='oz';
