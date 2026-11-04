@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>16 Week Six Pack Tracker</title>
+<title>Six Pack Tracker</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0e0e0e">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -115,7 +115,7 @@ footer{max-width:900px;margin:0 auto;padding:0 16px 40px;color:var(--mute);font-
 </style>
 </head>
 <body>
-<header><h1>16 WEEK <span>SIX PACK</span> TRACKER</h1></header>
+<header><h1><span>SIX PACK</span> TRACKER</h1></header>
 <nav><div id="nav"></div></nav>
 <main id="view"></main>
 <footer>Based on the 16 Week Six Pack Blueprint by Team Conditioned. All data is saved only in this browser. General fitness information, not medical advice.</footer>
@@ -1464,7 +1464,7 @@ const body=calView==='day'?calDay(calDate):calView==='week'?calWeek(calDate):cal
 return`<div class="card noprint"><div class="seg" style="margin-bottom:10px">${[['day','Day'],['week','Week'],['month','Month'],['plan','16 Weeks']].map(v=>`<button data-cv="${v[0]}" class="${calView===v[0]?'on':''}">${v[1]}</button>`).join('')}</div>
 ${calView==='plan'?'':`<div class="row"><button class="btn alt sm" id="cprev">&lt;</button><b class="grow" style="text-align:center">${calLabel()}</b><button class="btn alt sm" id="cnext">&gt;</button><button class="btn sm" id="ctod">Today</button></div>`}
 <div style="margin-top:10px"><button class="btn alt" id="cprint">Print this calendar</button></div></div>
-<h2 class="printonly">16 Week Six Pack Tracker: ${calLabel()}</h2>
+<h2 class="printonly">Six Pack Tracker: ${calLabel()}</h2>
 ${body}`;
 }
 function bindCal(){
