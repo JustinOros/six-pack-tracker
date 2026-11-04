@@ -59,6 +59,8 @@ td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
 .tip{border-left:4px solid var(--accent);padding:8px 12px;background:#1f1b0e;border-radius:6px;margin:10px 0;font-size:14px}
 .food{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
 .food:last-child{border-bottom:0}
+#savedtoast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--good);color:#000;padding:8px 18px;border-radius:20px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}
+#savedtoast.show{opacity:1}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
 .stat{background:#0f0f0f;border:1px solid var(--line);border-radius:10px;padding:10px}
 .stat b{display:block;font-size:22px}
@@ -340,11 +342,19 @@ const SUPPS=[
 ];
 const SUPP_WARN='Supplements are optional. Check with your doctor first, especially if you take medication or have a health condition.';
 
-function defaults(){return{settings:{start:TODAY,weight:'',split:4,meals:3,units:'g',setup:false,trainDays:[],gym:'full',equip:[],level:'new'},days:{},lifts:{},meals:[],checkins:{}}}
+function defaults(){return{settings:{start:TODAY,weight:'',split:4,meals:3,units:'g',setup:false,trainDays:[],gym:'full',equip:[],level:'new',sex:'',age:''},days:{},lifts:{},meals:[],checkins:{}}}
 function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r&&r.settings)return{settings:Object.assign(defaults().settings,r.settings),days:r.days||{},lifts:r.lifts||{},meals:r.meals||[],checkins:r.checkins||{}}}catch(e){}return defaults()}
 let S=load();
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-function day(d){if(!S.days[d])S.days[d]={weight:'',steps:'',food:[],supps:{},workout:false,photo:false,notes:'',sleep:'',energy:'',recov:'',alc:'',sug:''};return S.days[d]}
+let _tt;
+function flashSaved(){
+try{
+let e=document.getElementById('savedtoast');
+if(!e){e=document.createElement('div');e.id='savedtoast';e.textContent='Saved';document.body.appendChild(e)}
+e.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>e.classList.remove('show'),1400);
+}catch(x){}
+}
+function save(quiet){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(!quiet)flashSaved()}
+function day(d){if(!S.days[d])S.days[d]={weight:'',steps:'',food:[],supps:{},workout:false,photo:false,notes:'',sleep:'',energy:'',recov:'',alc:'',sug:'',water:''};return S.days[d]}
 
 let tab=S.settings.setup?'today':'setup';
 let cur=TODAY;
@@ -382,6 +392,15 @@ seen[n.toLowerCase()]=1;out.push(x);
 return out;
 }
 
+function sleepTarget(){const a=parseFloat(S.settings.age);return a>=65?'7-8':'7-9'}
+function waterGoal(d){
+const bw=gearBw();
+let g=bw>0?bw*0.6:100;
+g=Math.round(g/8)*8;
+g=Math.min(160,Math.max(64,g));
+if(workoutOn(d))g+=16;
+return g;
+}
 function phaseBanner(w){
 if(![5,9,13].includes(w))return '';
 const i=(w-1)/4,a=PHASES[i-1],b=PHASES[i];
@@ -633,22 +652,32 @@ TI=wo?wo.i:(nx?nx.x.i:0);
 const backupDue=Object.keys(S.days).length>=3&&(!S.settings.lastBackup||(pd(TODAY)-pd(S.settings.lastBackup))/86400000>7);
 const wl=w<1?'Starts in '+(1-w)+' wk':w>16?'Blueprint complete':'Week '+w+' of 16';
 const stepPct=Math.min(100,(Number(d.steps)||0)/10000*100);
+const sl=parseFloat(d.sleep);
+let slH=isNaN(sl)?'':Math.floor(sl),slM=isNaN(sl)?'':Math.round((sl-Math.floor(sl))*60);
+if(slM===60){slM=0;slH=slH+1}
+const wg=waterGoal(cur),wa=Number(d.water)||0,wp=Math.min(100,wg?wa/wg*100:0);
 const SM=S.meals||[];
 const yd=S.days[addDays(cur,-1)];
 const canCopy=!d.food.length&&yd&&yd.food.length;
 return`
 ${cur===TODAY?phaseBanner(w)+checkinDue():''}
+${backupDue?'<div class="tip"><b>Back up your data.</b> It is saved only in this browser. Go to Progress and tap Export backup.</div>':''}
 <div class="card">
 <div class="row"><button class="btn alt sm" id="prev">&lt;</button><input type="date" id="dt" value="${cur}" class="grow"><button class="btn alt sm" id="next">&gt;</button><button class="btn sm" id="tod">Today</button></div>
 <p style="margin:10px 0 0"><span class="pill y">${wl}</span><span class="pill">${ph.label} targets</span></p>
 </div>
-<div class="card"><h2>Your Plan Today</h2>
+<div class="card"><h2>Morning</h2>
+<div class="row"><div class="grow"><label>Morning weight (lb), after the bathroom and before eating</label><input id="wt" type="number" inputmode="decimal" step="0.1" value="${esc(d.weight)}"></div></div>
+<label style="margin-top:10px">Hours slept last night (optional)</label>
+<div class="row" style="flex-wrap:nowrap;align-items:center"><input id="slh" type="number" inputmode="numeric" min="0" max="24" placeholder="hours" value="${slH}" style="max-width:110px"><span class="mute">h</span><input id="slm" type="number" inputmode="numeric" min="0" max="59" placeholder="min" value="${slM}" style="max-width:110px"><span class="mute">min</span></div>
+<p class="mute" style="margin:6px 0 0">Aim for ${sleepTarget()} hours. Use your smart ring or watch total (like 6 h 13 min), or your best guess. Skip it if you do not track sleep.</p>
+<div class="row" style="margin-top:12px;align-items:center"><button class="btn" id="msv">Save</button><span id="msst" class="mute">${d.weight!==''||d.sleep!==''?'Saved':''}</span></div>
+</div>
+<div class="card"><h2>Today's Plan</h2>
 <div class="check"><div class="grow"><b>Workout:</b> ${wo?esc(wo.name)+(d.workout?' (done)':''):'Rest day.'+(nx?' Next: '+esc(nx.x.name)+' on '+WD[pd(addDays(cur,nx.k)).getDay()]:'')}</div><button class="btn sm" id="gotrain">Open</button></div>
+<div class="check"><input type="checkbox" id="wk" ${d.workout?'checked':''}><label style="margin:0;color:var(--text)">Workout completed</label></div>
 <div class="check"><div class="grow"><b>Food:</b> ${ph.kcal} kcal, ${ph.p}g protein, ${ph.c}g carbs, ${ph.f}g fat</div><button class="btn alt sm" id="gomeals">Meals</button></div>
-<div class="check"><div class="grow"><b>Steps:</b> 10,000</div></div>
-<div class="check"><div class="grow"><b>Sleep:</b> 7-9 hours</div></div>
 <details><summary>Show today's meals</summary>${ph.plans[S.settings.meals].rows.map((m,i)=>`<p class="mute" style="margin:6px 0"><b>${i+1}.</b> ${m[0]}<br>${conv(m[1])}</p>`).join('')}</details>
-${backupDue?'<div class="tip"><b>Back up your data.</b> It is saved only in this browser. Go to Progress and tap Export backup.</div>':''}
 </div>
 <div class="card"><h2>Daily Targets</h2>
 <div id="goalbox">${goalBanner(t,ph)}</div>
@@ -671,20 +700,22 @@ ${RF.length?`<p class="mute" style="margin:10px 0 4px">Tap to add again:</p><div
 <div style="margin-top:10px">${d.food.length?d.food.map((x,i)=>`<div class="food"><input type="checkbox" data-sel="${i}" aria-label="Select ${esc(x.n||'Food')}" style="width:auto;margin-right:8px"><span style="flex:1">${esc(x.n||'Food')}<br><span class="mute">${Math.round(x.k)} kcal | P ${Math.round(x.p)} | C ${Math.round(x.c)} | F ${Math.round(x.f)}</span></span><button class="btn danger sm" data-del="${i}">Remove</button></div>`).join(''):'<p class="mute">Nothing logged yet.</p>'}</div>
 ${d.food.length?'<div class="row" style="margin-top:10px"><div class="grow" style="flex:2;min-width:160px"><label>Save as a meal (tick items above, or leave blank to save all)</label><input id="mn" placeholder="e.g. Breakfast"></div><button class="btn alt" id="msave">Save meal</button></div>':''}
 </div>
-<div class="card"><h2>Daily Check-in</h2>
-<div class="row"><div class="grow"><label>Morning weight (lb, fasted)</label><input id="wt" type="number" inputmode="decimal" step="0.1" value="${esc(d.weight)}"></div>
-<div class="grow"><label>Steps (goal 10,000)</label><input id="st" type="number" inputmode="numeric" value="${esc(d.steps)}"></div></div>
-<div class="bar" style="margin:10px 0"><i style="width:${stepPct}%"></i></div>
-<div class="check"><input type="checkbox" id="wk" ${d.workout?'checked':''}><label style="margin:0;color:var(--text)">Workout completed</label></div>
-<div class="check"><input type="checkbox" id="ph" ${d.photo?'checked':''}><label style="margin:0;color:var(--text)">Progress photo taken (weekly or bi-weekly, same lighting)</label></div>
+<div class="card"><h2>Water</h2>
+<div class="goal ${wa>=wg?'':''}"><div class="t"><span>You've had <b>${Math.round(wp)}%</b> of your water goal</span><span>${Math.round(wa)} / ${wg} oz</span></div><div class="bar big"><i style="width:${wp}%"></i></div><p>${wa>=wg?'Goal reached. Nice work.':(wg-wa)+' oz to go. Sip through the day.'}</p></div>
+<div class="seg" id="wat"><button data-w="8" style="flex:none">+8 oz</button><button data-w="16" style="flex:none">+16 oz</button><button data-w="24" style="flex:none">+24 oz</button><button data-w="32" style="flex:none">+32 oz</button><button data-w="-8" class="alt" style="flex:none">-8 oz</button></div>
+<p class="mute" style="margin:0">Goal is about 0.6 oz per lb of body weight, plus 16 oz on workout days. 8 oz is one cup and a 16 oz bottle is two.</p>
 </div>
 <div class="card"><h2>Supplements</h2>
 ${SUPPS.map((s,i)=>`<div class="check"><input type="checkbox" data-sp="${i}" ${d.supps[i]?'checked':''}><label style="margin:0;color:var(--text)">${s[0]} <span class="mute">${s[1]}</span></label>${shop(s[0])}</div>`).join('')}
 <p class="mute" style="margin-bottom:0">${SUPP_WARN}</p>
 </div>
-<div class="card"><h2>Sleep and Recovery</h2>
-<div class="row">
-<div class="grow"><label>Hours slept last night</label><input id="slp" type="number" inputmode="decimal" step="0.1" min="0" max="24" value="${esc(d.sleep||'')}"></div>
+<div class="card"><h2>Evening Wrap-up</h2>
+<div class="row"><div class="grow"><label>Steps (goal 10,000)</label><input id="st" type="number" inputmode="numeric" value="${esc(d.steps)}"></div></div>
+<div class="bar" style="margin:10px 0"><i style="width:${stepPct}%"></i></div>
+<div class="check"><input type="checkbox" id="ph" ${d.photo?'checked':''}><label style="margin:0;color:var(--text)">Progress photo taken (weekly or bi-weekly, same lighting)</label></div>
+<label>Notes</label><textarea id="nt">${esc(d.notes)}</textarea>
+<details style="margin-top:12px"><summary>Optional: how you feel and habits</summary>
+<div class="row" style="margin-top:10px">
 <div class="grow"><label>Energy (1 low, 5 high)</label><select id="en"><option value="">-</option>${[1,2,3,4,5].map(n=>`<option value="${n}" ${String(d.energy)===String(n)?'selected':''}>${n}</option>`).join('')}</select></div>
 <div class="grow"><label>Recovery (1 sore and drained, 5 fresh)</label><select id="rc"><option value="">-</option>${[1,2,3,4,5].map(n=>`<option value="${n}" ${String(d.recov)===String(n)?'selected':''}>${n}</option>`).join('')}</select></div>
 </div>
@@ -692,8 +723,9 @@ ${SUPPS.map((s,i)=>`<div class="check"><input type="checkbox" data-sp="${i}" ${d
 <div class="grow"><label>Alcoholic drinks today</label><input id="al" type="number" inputmode="numeric" min="0" value="${esc(d.alc||'')}"></div>
 <div class="grow"><label>Sugary drinks today (soda, juice, energy)</label><input id="sg" type="number" inputmode="numeric" min="0" value="${esc(d.sug||'')}"></div>
 </div>
-<div class="tip">Aim for 7-9 hours of sleep. If you wear a smart ring, copy your sleep hours here and use the ring's trends, not a single night. See the Guide tab for details.</div>
-<label>Notes</label><textarea id="nt">${esc(d.notes)}</textarea></div>`;
+<p class="mute" style="margin-bottom:0">These help you spot patterns in the Progress tab. You can skip them.</p>
+</details>
+</div>`;
 }
 function bindToday(){
 const go=n=>{cur=n;render()};
@@ -749,12 +781,29 @@ S.meals.push({n:nm,items});save();render();
 if($('#gocheck'))$('#gocheck').onclick=()=>{tab='progress';render();window.scrollTo(0,0)};
 $('#gotrain').onclick=()=>{trainDay=TI;tab='train';render();window.scrollTo(0,0)};
 $('#gomeals').onclick=()=>{window._mp=undefined;tab='meals';render();window.scrollTo(0,0)};
+$('#wt').oninput=e=>{day(cur).weight=e.target.value;save(true)};
 $('#wt').onchange=e=>{day(cur).weight=e.target.value;save()};
+const sleepSet=()=>{
+const hv=$('#slh').value,mv=$('#slm').value;
+if(hv===''&&mv==='')day(cur).sleep='';
+else day(cur).sleep=String(+((parseFloat(hv)||0)+(parseFloat(mv)||0)/60).toFixed(2));
+save(true);
+};
+$('#slh').oninput=sleepSet;$('#slm').oninput=sleepSet;
+$('#slh').onchange=()=>{sleepSet();flashSaved()};$('#slm').onchange=()=>{sleepSet();flashSaved()};
+$('#msv').onclick=()=>{
+day(cur).weight=$('#wt').value;
+sleepSet();
+save();
+$('#msst').textContent='Saved at '+new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+};
+document.querySelectorAll('#wat button').forEach(b=>b.onclick=()=>{
+const x=day(cur);x.water=Math.max(0,(Number(x.water)||0)+(+b.dataset.w));save();render();
+});
 $('#st').onchange=e=>{day(cur).steps=e.target.value;save();render()};
 $('#wk').onchange=e=>{day(cur).workout=e.target.checked;save()};
 $('#ph').onchange=e=>{day(cur).photo=e.target.checked;save()};
 $('#nt').onchange=e=>{day(cur).notes=e.target.value;save()};
-$('#slp').onchange=e=>{day(cur).sleep=e.target.value;save()};
 $('#en').onchange=e=>{day(cur).energy=e.target.value;save()};
 $('#rc').onchange=e=>{day(cur).recov=e.target.value;save()};
 $('#al').onchange=e=>{day(cur).alc=e.target.value;save()};
@@ -913,7 +962,7 @@ if(!bw)return head+`<p class="mute">Enter your starting weight in Setup to see s
 const rows=GEAR.filter(g=>g[1].every(owns));
 if(!rows.length)return head+`<p class="mute">Check your equipment in Setup to see suggested weights.</p></div>`;
 const f=[1,1.15,1.3];
-const calc=rows.map(g=>{const b=bw*g[2]*lv[1];return[g[0],f.map(x=>r5(b*x))]});
+const calc=rows.map(g=>{const b=bw*g[2]*lv[1]*(S.settings.sex==='f'?0.65:1);return[g[0],f.map(x=>r5(b*x))]});
 const dbRows=rows.map((g,i)=>({g,v:calc[i][1][2]})).filter(x=>/dumbbell/i.test(x.g[0])&&!/total/i.test(x.g[0]));
 const maxDb=dbRows.length?Math.max.apply(null,dbRows.map(x=>x.v)):0;
 const pcpRow=calc.find(c=>/chest press/i.test(c[0]));
@@ -926,7 +975,7 @@ return head+`<p class="mute">Estimates for working sets in the 6-12 rep range, b
 <div class="scroll"><table><tr><th>Lift</th><th>Week 1</th><th>Week 8</th><th>Week 16</th></tr>
 ${calc.map(c=>`<tr><td>${c[0]}</td><td>${c[1][0]} lb</td><td>${c[1][1]} lb</td><td>${c[1][2]} lb</td></tr>`).join('')}</table></div>
 <div class="tip"><b>What to buy:</b><ul style="margin:6px 0 0 18px;padding:0">${buy}</ul></div>
-<p class="mute" style="margin:8px 0 0">These are rough averages for a man of your size. Everyone differs, so test your first week and adjust. Pull-ups, dips, push-ups and knee raises use your body weight, so they need no extra plates.</p></div>`;
+<p class="mute" style="margin:8px 0 0">These are rough averages for ${S.settings.sex==='f'?'a woman':S.settings.sex==='m'?'a man':'someone'} of your size. Everyone differs, so test your first week and adjust. Pull-ups, dips, push-ups and knee raises use your body weight, so they need no extra plates.</p></div>`;
 }
 function lastLift(name){const a=S.lifts[name];return a&&a.length?a[a.length-1]:null}
 function viewTrain(){
@@ -1021,16 +1070,17 @@ let prev=null;
 return ks.map(k=>{const a=m[k].reduce((s,v)=>s+v,0)/m[k].length;const r={w:k,avg:a,n:m[k].length,ch:prev===null?null:a-prev};prev=a;return r});
 }
 function recent7(){
-const sl=[],en=[],rc=[];let al=0,sg=0;
+const sl=[],en=[],rc=[],wt=[];let al=0,sg=0;
 for(let i=0;i<7;i++){
 const d=S.days[addDays(TODAY,-i)];if(!d)continue;
 const s=parseFloat(d.sleep),e=parseFloat(d.energy),r=parseFloat(d.recov);
 if(!isNaN(s))sl.push(s);if(!isNaN(e))en.push(e);if(!isNaN(r))rc.push(r);
+const wv=parseFloat(d.water);if(wv>0)wt.push(wv);
 al+=parseFloat(d.alc)||0;sg+=parseFloat(d.sug)||0;
 }
 const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
 const f=a=>a.length?avg(a).toFixed(1):'-';
-return{sl:f(sl),en:f(en),rc:f(rc),al,sg,low:sl.length>=3&&avg(sl)<7};
+return{sl:f(sl),en:f(en),rc:f(rc),wt:wt.length?Math.round(avg(wt)):'-',al,sg,low:sl.length>=3&&avg(sl)<7};
 }
 function winStats(from,to){
 const wts=[],kc=[],st=[],sl=[];let wo=0,sched=0,logged=0;
@@ -1106,6 +1156,7 @@ ${checkinCard()}
 <div class="stat"><b>${R7.sl}</b><span>Avg sleep (hours)</span></div>
 <div class="stat"><b>${R7.en}</b><span>Avg energy (1-5)</span></div>
 <div class="stat"><b>${R7.rc}</b><span>Avg recovery (1-5)</span></div>
+<div class="stat"><b>${R7.wt}</b><span>Avg water (oz)</span></div>
 <div class="stat"><b>${R7.al}</b><span>Alcoholic drinks</span></div>
 <div class="stat"><b>${R7.sg}</b><span>Sugary drinks</span></div>
 </div>
@@ -1220,20 +1271,26 @@ ${SUPPS.map(s=>`<tr><td><b>${s[0]}</b> ${shop(s[0])}</td><td>${s[1]}</td><td cla
 </div>`;
 }
 
-function calcHtml(wt){
-let calc='';
-if(wt>0){
-const m1=Math.round(wt*14),m2=Math.round(wt*16);
-calc=`<h3>Your estimates</h3>
+function calcHtml(wt,sex,age){
+if(!(wt>0))return '';
+const f=sex==='f';
+const a=parseFloat(age);
+const af=a>30?Math.max(0.8,1-(a-30)*0.002):1;
+const m1=Math.round(wt*(f?12:14)*af),m2=Math.round(wt*(f?14:16)*af);
+const s1=Math.round(m1*.8),s2=Math.round(m2*.85);
+const bp=PHASES[0].kcal;
+let fit='';
+if(bp>s2*1.08)fit=`<div class="tip"><b>Heads up:</b> the blueprint starts at ${bp} kcal, above your estimated starting range of ${s1}-${s2}. You may lose weight more slowly. Track for 2 weeks, and if your weight is not dropping, lower calories by 100-200 a day, mostly from carbs. Keep protein at target.</div>`;
+else if(bp<s1*0.92)fit=`<div class="tip"><b>Heads up:</b> the blueprint starts at ${bp} kcal, below your estimated starting range of ${s1}-${s2}. If you feel run down or hungry all the time, add 100-200 kcal from carbs.</div>`;
+return`<h3>Your estimates</h3>
 <div class="stats">
 <div class="stat"><b>${m1}-${m2}</b><span>Maintenance kcal</span></div>
-<div class="stat"><b>${Math.round(m1*.8)}-${Math.round(m2*.85)}</b><span>Starting kcal (15-20% deficit)</span></div>
+<div class="stat"><b>${s1}-${s2}</b><span>Starting kcal (15-20% deficit)</span></div>
 <div class="stat"><b>${Math.round(wt)}-${Math.round(wt*1.2)} g</b><span>Protein</span></div>
 <div class="stat"><b>${Math.round(wt*.3)}-${Math.round(wt*.4)} g</b><span>Fat</span></div>
 </div>
-<p class="mute">The Meals tab uses the fixed blueprint targets (2200, 2000, 1850, 1700 kcal). Use the numbers above as a sanity check for your size.</p>`;
-}
-return calc;
+${fit}
+<p class="mute">The Meals tab uses the fixed blueprint targets (2200, 2000, 1850, 1700 kcal). These estimates are rough${sex?'':' (choose Male or Female for a closer one)'}, so use them as a sanity check for your size.</p>`;
 }
 function viewSetup(){
 const s=S.settings;
@@ -1244,12 +1301,15 @@ return`
 <div class="grow"><label>Start date (Week 1, Day 1)</label><input type="date" id="sd" value="${s.start}"></div>
 <div class="grow"><label>Starting weight (lb)</label><input type="number" id="sw" inputmode="decimal" step="0.1" value="${esc(s.weight)}"></div></div>
 <div class="row" style="margin-top:10px">
+<div class="grow"><label>Sex (for estimates)</label><select id="sx"><option value="">Not set</option><option value="m" ${s.sex==='m'?'selected':''}>Male</option><option value="f" ${s.sex==='f'?'selected':''}>Female</option></select></div>
+<div class="grow"><label>Age (optional)</label><input type="number" id="ag" inputmode="numeric" min="14" max="100" value="${esc(s.age||'')}"></div></div>
+<div class="row" style="margin-top:10px">
 <div class="grow"><label>Training days per week</label><select id="sp">${[3,4,5].map(n=>`<option value="${n}" ${n===s.split?'selected':''}>${n} days</option>`).join('')}</select></div>
 <div class="grow"><label>Meals per day</label><select id="sm">${[3,4,5].map(n=>`<option value="${n}" ${n===s.meals?'selected':''}>${n} meals</option>`).join('')}</select></div>
 <div class="grow"><label>Food units</label><select id="su"><option value="g" ${s.units==='g'?'selected':''}>Grams</option><option value="oz" ${s.units==='oz'?'selected':''}>Ounces</option></select></div></div>
 <div style="margin-top:10px"><label>Training days (tap to change)</label><div class="seg" id="tdw" style="margin-bottom:4px">${WD.map((n,i)=>`<button data-wd="${i}" class="${window._td.includes(i)?'on':''}">${n}</button>`).join('')}</div><p class="mute" id="tdnote" style="margin:0"></p></div>
 <p class="mute">Not sure? Start with 3 training days and 3 meals per day. You can change these any time.</p>
-<div id="calc">${calcHtml(parseFloat(s.weight))}</div>
+<div id="calc">${calcHtml(parseFloat(s.weight),s.sex,s.age)}</div>
 <div style="margin-top:14px"><button class="btn" id="sv">Save and start</button></div>
 </div>
 <div class="card"><h2>Where do you train?</h2>
@@ -1294,10 +1354,16 @@ const set=new Set(S.settings.equip||[]);
 if(c.checked)set.add(c.dataset.eq);else set.delete(c.dataset.eq);
 S.settings.equip=[...set];save();
 });
-$('#sw').oninput=e=>{S.settings.weight=e.target.value;$('#calc').innerHTML=calcHtml(parseFloat(e.target.value));save()};
+const refCalc=()=>{
+S.settings.weight=$('#sw').value;S.settings.sex=$('#sx').value;S.settings.age=$('#ag').value;
+$('#calc').innerHTML=calcHtml(parseFloat($('#sw').value),$('#sx').value,$('#ag').value);save(true);
+};
+$('#sw').oninput=refCalc;$('#sx').onchange=refCalc;$('#ag').oninput=refCalc;
 $('#sv').onclick=()=>{
 S.settings.start=$('#sd').value||TODAY;
 S.settings.weight=$('#sw').value;
+S.settings.sex=$('#sx').value;
+S.settings.age=$('#ag').value;
 S.settings.split=+$('#sp').value;
 S.settings.meals=+$('#sm').value;
 S.settings.units=$('#su').value;
