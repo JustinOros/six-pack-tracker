@@ -720,7 +720,7 @@ ${d.food.length?'<div class="row" style="margin-top:10px"><div class="grow" styl
 </div>
 <div class="card"><h2 data-sum="${Math.round(wa)} / ${wg} oz">Water</h2>
 <div class="goal ${wa>=wg?'':''}"><div class="t"><span>You've had <b>${Math.round(wp)}%</b> of your water goal</span><span>${Math.round(wa)} / ${wg} oz</span></div><div class="bar big"><i style="width:${wp}%"></i></div><p>${wa>=wg?'Goal reached. Nice work.':(wg-wa)+' oz to go. Sip through the day.'}</p></div>
-<div class="seg" id="wat"><button data-w="8" style="flex:none">+8 oz</button><button data-w="16" style="flex:none">+16 oz</button><button data-w="24" style="flex:none">+24 oz</button><button data-w="32" style="flex:none">+32 oz</button><button data-w="-8" class="alt" style="flex:none">-8 oz</button></div>
+<div class="seg" id="wat"><button data-w="8" style="flex:none">+8 oz</button><button data-w="12" style="flex:none">+12 oz</button><button data-w="16" style="flex:none">+16 oz</button><button data-w="24" style="flex:none">+24 oz</button><button data-w="32" style="flex:none">+32 oz</button><button data-w="-8" class="alt" style="flex:none">-8 oz</button></div>
 <p class="mute" style="margin:0">Goal is about 0.6 oz per lb of body weight, plus 16 oz on workout days. 8 oz is one cup and a 16 oz bottle is two.</p>
 </div>
 <div class="card"><h2 data-sum="${stN.toLocaleString()} / 10,000">Steps</h2>
